@@ -13,21 +13,33 @@ body{
 p{
   max-width: 600px;
 }
-input{
-  width: 3em;
+#program{
+  display: flex;
+  flex-wrap: wrap;
 }
-td{
+#data{
+  display: flex;
+  /*flex-direction: column*/
+}
+@media (max-width:600px) {
+  #data{
+    display: flex;
+    flex-direction: column;
+  }
+}
+div.command{
+  display:inline-block;
   width:1em;
-  height:1em;
   text-align: center;
-  border: 0px;
-  margin: 0px;
-  padding-top: 0px;
+  /*border: 0px;
+  margin-bottom: 0px;
+  padding-top: 0px;*/
 }
 .hidden{
   display: none;
 }
 input{
+  width: 3em;
   font-size: 1em;
   color: #0f0;
   background: black;
@@ -55,7 +67,10 @@ button{
 -[--]
 +[>-]
 +<<+[>>>>+<<]
------->+++++[[-<+++>]<]</script>
+multiplication by 3;------>+++++[[-<+++>]<]
+fib;+<+[++++>[-<+<+>>]<<----]
+multiplication;------------>>+[[->[-<<+<+>>>]<<[->>+<<]>]<+<]
++[The End[-]+]</script>
 <!-- +++<<<+[[->>>>+<+++<<<]>>>>[>+<[-]]>[]<<-] -->
 
 </head>
@@ -70,13 +85,14 @@ button{
 </div>
 
 <div id=main class=hidden>
-  <table><tr id="program"> </tr></table>
+  <div id="program"> </div>
   <table><tr id="data"> </tr></table>
 <!--<input type="number" id="test" value="3" min=-1 max=256 step=1 width="3em" />-->
 <button onclick="reset()">reset</button>
 <button onclick="stepAndDraw()">step</button>
 <button onclick="run()" id="run">run</button>
-<button onclick="run(10)" id="run">faster</button>
+<button onclick="run(10)" id="faster">faster</button>
+<button onclick="fastest(997)" id="fastest">fastest</button>
 <button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
 <script type="text/javascript">
@@ -101,13 +117,17 @@ function setPuzzle(n){
   puznum = n
   if (n==0) score=0
   pz = pzs[n]+" "
+  if ((idx = pz.indexOf(";"))!=-1){
+    pz=pz.slice(idx+1)
+  }
   rprog.innerHTML=""
   rdat.innerHTML=""
   let x=0
   for(c of pz){
-    let cell = document.createElement("td")
+    let cell = document.createElement("div")
     cell.innerText=c
     cell.id="p"+x
+    cell.classList.add("command")
     rprog.appendChild(cell)
     x+=1
   }
@@ -215,9 +235,31 @@ function stepAndDraw(){
     pause()
   }
 }
+function fastest(n){
+  if(pp+1>=pz.length){return}
+  pause()
+  running=true
+  brun.innerText="pause"
+  function f(){
+    runner = setTimeout(f,30)
+    document.getElementById("p"+pp).classList.remove("highlight")
+    for (let i=0;i<n && running;i++) step()
+    for(x of dataShown){
+      document.getElementById("d"+x).value=data[dp+x]
+    }
+    document.getElementById("p"+pp).classList.add("highlight")
+    if(pp==target){
+      enableInput()
+      target=undefined
+      pause()
+    }
+  }
+  setTimeout(f,30)
+}
 
 function run(delay){
   if (!delay) delay=1000
+  else{pause()}
   if(running){
     clearTimeout(runner)
     brun.innerText="run"
@@ -259,6 +301,7 @@ function disableInput(){
 }
 function finish(){
   bnext.classList.remove("hidden")
+  pause()
 }
 
 //setPuzzle(0)
@@ -267,6 +310,7 @@ function finish(){
 </body>
 <!--
 FAQ:
-If you have a Xeno machine, then why
+If you have a Xeno machine, then why does it take so long for the programs to run?
+I'm not going to give you direct access until after you've tested your code!
 -->
 </html>
