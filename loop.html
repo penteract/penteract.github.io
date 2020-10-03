@@ -18,9 +18,24 @@ input{
 td{
   width:1em;
   height:1em;
+  text-align: center;
+  border: 0px;
+  margin: 0px;
+  padding-top: 0px;
 }
 .hidden{
   display: none;
+}
+input{
+  color: #0f0;
+  background: black;
+  border: none;
+  text-align: center;
+  //appearance: textfield;
+}
+.highlight{
+  color: black;
+  background: #0f0;
 }
   </style>
 
@@ -37,9 +52,8 @@ td{
   However, there is a slight problem - the machine is stuck in a loop.
   We have a limited amount of access to the internals and I need you to use it to break out.
 </p>
+<button onclick="setPuzzle(0)" > Go </button>
 </div>
-
-<button onclick="puzzle(0)" > Go </button>
 
 <div id=main class=hidden>
   <table><tr id="program"> </tr>
@@ -47,6 +61,8 @@ td{
   <table><tr id="data"> </tr>
   <tr id="datapointer"> </tr></table>
 <!--<input type="number" id="test" value="3" min=-1 max=256 step=1 width="3em" />-->
+<button onclick="stepAndDraw()">step</button>
+<button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
 <script type="text/javascript">
 
@@ -57,42 +73,115 @@ pzs = document.getElementById("puzzles").innerText.split("\n")
 intro = document.getElementById("intro")
 main = document.getElementById("main")
 
-prog = document.getElementById("program")
+rprog = document.getElementById("program")
 //progp = document.getElementById("programpointer")
-dat = document.getElementById("data")
+rdat = document.getElementById("data")
+bnext = document.getElementById("next")
 //datp = document.getElementById("datapointer")
 
-function puzzle(n){
-  num = n
-  let pz = pzs[n]
-  prog.innerHTML=""
-  dat.innerHTML=""
+function setPuzzle(n){
+  puznum = n
+  if (n==0) score=0
+  pz = pzs[n]+" "
+  data = [0,0,0,0,0]
+  rprog.innerHTML=""
+  rdat.innerHTML=""
   let x=0
   for(c of pz){
-    x+=1
     let cell = document.createElement("td")
     cell.innerText=c
     cell.id="p"+x
-    prog.appendChild(cell)
+    rprog.appendChild(cell)
+    x+=1
   }
-  for(x of [0,1,2,3,4]){
+  for(let x of [0,1,2,3,4]){
     let i = document.createElement("input")
     i.type="number"
     i.value="0"
     i.id="d"+x
-    i.addEventListener("input",function(e) {if (i.value&-256)i.value=(i.value%256+256)%256;})
+    //i.disabled="true"
+    if(x==2)i.classList.add("highlight")
+    i.addEventListener("input",function(e) {
+      data[dp-2+x]=i.value&255;
+      if (i.value&-256)
+        i.value = data[dp-2+x]
+    })
     let cell = document.createElement("td")
     cell.appendChild(i)
-    data.appendChild(cell)
+    rdat.appendChild(cell)
   }
+  pp=0
+  dp=2
+  document.getElementById("p"+pp).classList.add("highlight")
   intro.classList.add("hidden")
   main.classList.remove("hidden")
+  bnext.classList.add("hidden")
 }
 
-//b.addEventListener('input', function(e) {console.log(e);if (b.value&-256)b.value=(b.value%256+256)%256;})
-//bb = document.createElement("input")
-//bb.type="number"
-//document.body.appendChild(bb)
+function getMatching(pos,symbol,direction){
+  let nesting=0
+  while (pos>=0 && pos<pz.length) {
+    pos+=direction
+    if(nesting==0 && pz[pos]==symbol) return pos
+    if(pz[pos]=="[")nesting+=1
+    if(pz[pos]=="]")nesting-=1
+  }
+}
+function getOpening(n){
+  return getMatching(n,"[",-1)
+}
+function getClosing(n){
+  return getMatching(n,"]",1)
+}
+
+function step(){
+  switch(pz[pp]){
+    case "+":
+      data[dp]=(data[dp]+1)&255
+      break;
+    case "-":
+      data[dp]=(data[dp]-1)&255
+      break;
+    case ">":
+      dp+=1
+      if(dp+2>=data.length)data.push(0)
+      break
+    case "<":
+      dp-=1
+      if(dp-2<0){
+        dp+=data.length
+        arr=[]
+        for(let i=0;i<data.length;i++){
+          arr.push(0)
+        }
+        data=arr.concat(data)
+      }
+      break
+    case "[":
+      if(data[dp]==0)pp=getClosing(pp)
+      break;
+    case "]":
+      if(data[dp])pp=getOpening(pp)
+      break;
+  }
+  pp+=1
+  if(pp+1==pz.length)finish()
+}
+function stepAndDraw(){
+  if(pp+1>=pz.length){return}
+  document.getElementById("p"+pp).classList.remove("highlight")
+  step()
+  for(x of [0,1,2,3,4]){
+    document.getElementById("d"+x).value=data[dp-2+x]
+  }
+  document.getElementById("p"+pp).classList.add("highlight")
+}
+function finish(){
+  bnext.classList.remove("hidden")
+}
+
+setPuzzle(0)
+
 </script>
 </body>
 </html>
