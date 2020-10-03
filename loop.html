@@ -42,10 +42,11 @@ input{
   appearance: textfield;
 }
 button{
-color: #0f0;
-background: black;
+  color: #0f0;
+  background: black;
   font-size: 1em;
   border-color: #080;
+  width: 5em;
 
 }
   </style>
@@ -53,7 +54,9 @@ background: black;
 <script type="text/brainstuck" id="puzzles">+[ ]
 -[--]
 +[>-]
-+<<+[>>>>+<<]</script>
++<<+[>>>>+<<]
+------>+++++[[-<+++>]<]</script>
+<!-- +++<<<+[[->>>>+<+++<<<]>>>>[>+<[-]]>[]<<-] -->
 
 </head>
 <body>
@@ -70,8 +73,10 @@ background: black;
   <table><tr id="program"> </tr></table>
   <table><tr id="data"> </tr></table>
 <!--<input type="number" id="test" value="3" min=-1 max=256 step=1 width="3em" />-->
+<button onclick="reset()">reset</button>
 <button onclick="stepAndDraw()">step</button>
 <button onclick="run()" id="run">run</button>
+<button onclick="run(10)" id="run">faster</button>
 <button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
 <script type="text/javascript">
@@ -88,6 +93,7 @@ rdat = document.getElementById("data")
 bnext = document.getElementById("next")
 brun = document.getElementById("run")
 dataShown = [-3,-2,-1,0,1,2,3]
+editable = [0,1,2]
 effect=new Audio("thunk3.wav")
 effect.volume=0.3
 
@@ -132,10 +138,10 @@ function setPuzzle(n){
   main.classList.remove("hidden")
   bnext.classList.add("hidden")
   if(pz[pz.length-2]=="]"){
-    start=getOpening(pz.length-2)+1
+    target=getOpening(pz.length-2)+1
     running=false
     clearTimeout(window.runner)
-    run(start,enableInput)
+    run()
   }
   else{throw new Error("bad level (does not end in ']')")}
 }
@@ -154,6 +160,9 @@ function getOpening(n){
 }
 function getClosing(n){
   return getMatching(n,"]",1)//When getMatching used while(true) and this was mistakenly -1,
+}
+function reset(){
+  setPuzzle(puznum)
 }
 
 function step(){
@@ -200,9 +209,15 @@ function stepAndDraw(){
   document.getElementById("p"+pp).classList.add("highlight")
   effect.play()
   effect.fastSeek(0)
+  if(pp==target){
+    enableInput()
+    target=undefined
+    pause()
+  }
 }
 
-function run(end,callback){
+function run(delay){
+  if (!delay) delay=1000
   if(running){
     clearTimeout(runner)
     brun.innerText="run"
@@ -210,22 +225,22 @@ function run(end,callback){
   else{
     brun.innerText="pause"
     function f(){
+      runner = setTimeout(f,delay)
       stepAndDraw()
-      runner = setTimeout(f,1000)
-      if(pp==end) {
-        callback()
-        run()
-      }
     }
     runner = setTimeout(f,10)
   }
 
   running = !running
 }
+function pause(){
+  running=true
+  run()
+}
 
 function enableInput(){
   noInput=false
-  for (let x of dataShown){
+  for (let x of editable){
     let e = document.getElementById("d"+x)
     e.classList.remove("disabled")
     e.disabled=false
@@ -250,4 +265,8 @@ function finish(){
 
 </script>
 </body>
+<!--
+FAQ:
+If you have a Xeno machine, then why
+-->
 </html>
