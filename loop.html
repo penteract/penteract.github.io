@@ -5,6 +5,7 @@
   <title> LD47 brainstuck </title>
   <style>
 body{
+  font-size: 1.5em;
   background:#000;
   color:#0f0;
   margin-left: 20px;
@@ -27,20 +28,30 @@ td{
   display: none;
 }
 input{
+  font-size: 1em;
   color: #0f0;
   background: black;
   border: none;
   text-align: center;
-  //appearance: textfield;
 }
 .highlight{
   color: black;
   background: #0f0;
 }
+.disabled{
+  appearance: textfield;
+}
+button{
+color: #0f0;
+background: black;
+  font-size: 1em;
+  border-color: #080;
+
+}
   </style>
 
 <script type="text/brainstuck" id="puzzles">+[ ]
-+[--]
+-[--]
 +[>-]
 +<<+[>>>>+<<]</script>
 
@@ -52,16 +63,15 @@ input{
   However, there is a slight problem - the machine is stuck in a loop.
   We have a limited amount of access to the internals and I need you to use it to break out.
 </p>
-<button onclick="setPuzzle(0)" > Go </button>
+<button onclick="setPuzzle(0)" > Begin </button>
 </div>
 
 <div id=main class=hidden>
-  <table><tr id="program"> </tr>
-  <tr id="programpointer"> </tr></table>
-  <table><tr id="data"> </tr>
-  <tr id="datapointer"> </tr></table>
+  <table><tr id="program"> </tr></table>
+  <table><tr id="data"> </tr></table>
 <!--<input type="number" id="test" value="3" min=-1 max=256 step=1 width="3em" />-->
 <button onclick="stepAndDraw()">step</button>
+<button onclick="run()" id="run">run</button>
 <button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
 <script type="text/javascript">
@@ -74,16 +84,17 @@ intro = document.getElementById("intro")
 main = document.getElementById("main")
 
 rprog = document.getElementById("program")
-//progp = document.getElementById("programpointer")
 rdat = document.getElementById("data")
 bnext = document.getElementById("next")
-//datp = document.getElementById("datapointer")
+brun = document.getElementById("run")
+dataShown = [-3,-2,-1,0,1,2,3]
+effect=new Audio("thunk3.wav")
+effect.volume=0.3
 
 function setPuzzle(n){
   puznum = n
   if (n==0) score=0
   pz = pzs[n]+" "
-  data = [0,0,0,0,0]
   rprog.innerHTML=""
   rdat.innerHTML=""
   let x=0
@@ -94,28 +105,39 @@ function setPuzzle(n){
     rprog.appendChild(cell)
     x+=1
   }
-  for(let x of [0,1,2,3,4]){
+  dp=0
+  pp=0
+  data=[]
+  for(let x of dataShown){
+    if (dp+x<0) dp=-x
+    data.push(0)
     let i = document.createElement("input")
     i.type="number"
     i.value="0"
     i.id="d"+x
     //i.disabled="true"
-    if(x==2)i.classList.add("highlight")
+    if(x==0)i.classList.add("highlight")
     i.addEventListener("input",function(e) {
-      data[dp-2+x]=i.value&255;
+      data[dp+x]=i.value&255;
       if (i.value&-256)
-        i.value = data[dp-2+x]
+        i.value = data[dp+x]
     })
     let cell = document.createElement("td")
     cell.appendChild(i)
     rdat.appendChild(cell)
   }
-  pp=0
-  dp=2
+  disableInput()
   document.getElementById("p"+pp).classList.add("highlight")
   intro.classList.add("hidden")
   main.classList.remove("hidden")
   bnext.classList.add("hidden")
+  if(pz[pz.length-2]=="]"){
+    start=getOpening(pz.length-2)+1
+    running=false
+    clearTimeout(window.runner)
+    run(start,enableInput)
+  }
+  else{throw new Error("bad level (does not end in ']')")}
 }
 
 function getMatching(pos,symbol,direction){
@@ -131,10 +153,11 @@ function getOpening(n){
   return getMatching(n,"[",-1)
 }
 function getClosing(n){
-  return getMatching(n,"]",1)
+  return getMatching(n,"]",1)//When getMatching used while(true) and this was mistakenly -1,
 }
 
 function step(){
+  disableInput()
   switch(pz[pp]){
     case "+":
       data[dp]=(data[dp]+1)&255
@@ -144,11 +167,11 @@ function step(){
       break;
     case ">":
       dp+=1
-      if(dp+2>=data.length)data.push(0)
+      if(dp+dataShown[dataShown.length-1]>=data.length)data.push(0)
       break
     case "<":
       dp-=1
-      if(dp-2<0){
+      if(dp+dataShown[0]<0){
         dp+=data.length
         arr=[]
         for(let i=0;i<data.length;i++){
@@ -171,16 +194,59 @@ function stepAndDraw(){
   if(pp+1>=pz.length){return}
   document.getElementById("p"+pp).classList.remove("highlight")
   step()
-  for(x of [0,1,2,3,4]){
-    document.getElementById("d"+x).value=data[dp-2+x]
+  for(x of dataShown){
+    document.getElementById("d"+x).value=data[dp+x]
   }
   document.getElementById("p"+pp).classList.add("highlight")
+  effect.play()
+  effect.fastSeek(0)
+}
+
+function run(end,callback){
+  if(running){
+    clearTimeout(runner)
+    brun.innerText="run"
+  }
+  else{
+    brun.innerText="pause"
+    function f(){
+      stepAndDraw()
+      runner = setTimeout(f,1000)
+      if(pp==end) {
+        callback()
+        run()
+      }
+    }
+    runner = setTimeout(f,10)
+  }
+
+  running = !running
+}
+
+function enableInput(){
+  noInput=false
+  for (let x of dataShown){
+    let e = document.getElementById("d"+x)
+    e.classList.remove("disabled")
+    e.disabled=false
+    //e.setAttribute("readonly","false")
+  }
+
+}
+function disableInput(){
+  noInput=true
+  for (let x of dataShown){
+    let e = document.getElementById("d"+x)
+    e.classList.add("disabled")
+    e.disabled=true
+    //e.setAttribute("readonly","true")
+  }
 }
 function finish(){
   bnext.classList.remove("hidden")
 }
 
-setPuzzle(0)
+//setPuzzle(0)
 
 </script>
 </body>
