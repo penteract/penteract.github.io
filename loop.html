@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title> LD47 brainstuck </title>
+  <style>
+body{
+  background:#000;
+  color:#0f0;
+  margin-left: 20px;
+}
+p{
+  max-width: 600px;
+}
+input{
+  width: 3em;
+}
+td{
+  width:1em;
+  height:1em;
+}
+.hidden{
+  display: none;
+}
+  </style>
+
+<script type="text/brainstuck" id="puzzles">+[ ]
++[--]
++[>-]
++<<+[>>>>+<<]</script>
+
+</head>
+<body>
+<div id=intro><p>
+  My friend, we have a Xeno machine. Unbounded computational power is almost within reach.
+  Think of the possibilities - we could learn whether ZFC is consistent!<br>
+  However, there is a slight problem - the machine is stuck in a loop.
+  We have a limited amount of access to the internals and I need you to use it to break out.
+</p>
+</div>
+
+<button onclick="puzzle(0)" > Go </button>
+
+<div id=main class=hidden>
+  <table><tr id="program"> </tr>
+  <tr id="programpointer"> </tr></table>
+  <table><tr id="data"> </tr>
+  <tr id="datapointer"> </tr></table>
+<!--<input type="number" id="test" value="3" min=-1 max=256 step=1 width="3em" />-->
+</div>
+<script type="text/javascript">
+
+pzs = document.getElementById("puzzles").innerText.split("\n")
+
+
+
+intro = document.getElementById("intro")
+main = document.getElementById("main")
+
+prog = document.getElementById("program")
+//progp = document.getElementById("programpointer")
+dat = document.getElementById("data")
+//datp = document.getElementById("datapointer")
+
+function puzzle(n){
+  num = n
+  let pz = pzs[n]
+  prog.innerHTML=""
+  dat.innerHTML=""
+  let x=0
+  for(c of pz){
+    x+=1
+    let cell = document.createElement("td")
+    cell.innerText=c
+    cell.id="p"+x
+    prog.appendChild(cell)
+  }
+  for(x of [0,1,2,3,4]){
+    let i = document.createElement("input")
+    i.type="number"
+    i.value="0"
+    i.id="d"+x
+    i.addEventListener("input",function(e) {if (i.value&-256)i.value=(i.value%256+256)%256;})
+    let cell = document.createElement("td")
+    cell.appendChild(i)
+    data.appendChild(cell)
+  }
+  intro.classList.add("hidden")
+  main.classList.remove("hidden")
+}
+
+//b.addEventListener('input', function(e) {console.log(e);if (b.value&-256)b.value=(b.value%256+256)%256;})
+//bb = document.createElement("input")
+//bb.type="number"
+//document.body.appendChild(bb)
+</script>
+</body>
+</html>
