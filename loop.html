@@ -400,9 +400,9 @@ function disableInput(arg){
   }
 }
 function next(){
-  setPuzzle(puznum+1)
   for (let i of [0,1])
     scores[i]+=levelscores[i]
+  setPuzzle(puznum+1)
 }
 function finish(){
   bnext.classList.remove("hidden")
