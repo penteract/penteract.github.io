@@ -100,7 +100,8 @@ xor;+[[-<+>>++<]>]
   My friend, we have a Xeno machine. Unbounded computational power is almost within reach.
   Think of the possibilities - we could learn whether ZFC is consistent!<br>
   However, there is a slight problem - the machine is stuck in a loop.
-  We have a limited amount of access to the internals and I need you to use it to break out.
+  We have a limited amount of access to the internals and I need you to use it to break out.<br>
+  By the way, you can click to add breakpoints.
 </p>
 <button onclick="setPuzzle(0)" > Begin </button>
 </div>
@@ -115,7 +116,8 @@ xor;+[[-<+>>++<]>]
 <!--<button onclick="run(50)" id="faster">faster</button>
 <button onclick="fastest(99991)" id="fastest">fastest</button>-->
 <nobr><label for=speed>speed</label>&nbsp;<input type=range id=speed min=0 max=60 value=0 /></nobr>
-<button id=next onclick="setPuzzle(puznum+1)">next</button>
+<button id=next onclick="next()">next</button>
+<div id=scores></div>
 </div>
 <script type="text/javascript">
 
@@ -125,6 +127,7 @@ pzs = document.getElementById("puzzles").innerText.split("\n")
 
 intro = document.getElementById("intro")
 main = document.getElementById("main")
+dscores=document.getElementById("scores")
 
 rprog = document.getElementById("program")
 rdat = document.getElementById("data")
@@ -138,11 +141,16 @@ effect=new Audio("thunk3.wav")
 effect.volume=0.3
 
 function setPuzzle(n){
+  dscores.innerHTML=""
   puznum = n
-  if (n==0) score=0
+  if (n==0) scores=[0,0]
+  levelscores=[0,0]
   pz = pzs[n]+" "
   if ((idx = pz.indexOf(";"))!=-1){
     pz=pz.slice(idx+1)
+  }
+  if (pz.indexOf("The End")!=-1){
+    showScores(scores)
   }
   rprog.innerHTML=""
   rdat.innerHTML=""
@@ -244,9 +252,19 @@ function getClosing(n){
 function reset(){
   setPuzzle(puznum)
 }
+function ready(){
+  enableInput()
+  setTarget(undefined)
+  starting=false
+  levelscores=[0,0]
+  initdat=[]
+  for (let x of editable){
+    initdat.push(data[dp+x])
+  }
+}
 
 function step(){
-  if(!noInput)disableInput()
+  if(editing)disableInput("ready")
   switch(pz[pp]){
     case "+":
       data[dp]=(data[dp]+1)&255
@@ -276,13 +294,12 @@ function step(){
       if(data[dp])pp=getOpening(pp)
       break;
   }
+  levelscores[0]+=1
   pp+=1
   if(pp+1==pz.length)finish()
   if(pp==target){
     if(starting){
-      enableInput()
-      setTarget(undefined)
-      starting=false
+      ready()
     }
     pause()
   }
@@ -358,7 +375,7 @@ function pause(){
 }
 
 function enableInput(){
-  noInput=false
+  editing=true
   for (let x of editable){
     let e = document.getElementById("d"+x)
     e.classList.remove("disabled")
@@ -367,8 +384,14 @@ function enableInput(){
   }
 
 }
-function disableInput(){
-  noInput=true
+function disableInput(arg){
+  if(arg){
+    for (x of editable){
+      let k = Math.abs(data[dp+x]-initdat[x])
+      levelscores[1]+=Math.min(k,(256-k)%256)
+    }
+  }
+  editing=false
   for (let x of dataShown){
     let e = document.getElementById("d"+x)
     e.classList.add("disabled")
@@ -376,9 +399,18 @@ function disableInput(){
     //e.setAttribute("readonly","true")
   }
 }
+function next(){
+  setPuzzle(puznum+1)
+  for (let i of [0,1])
+    scores[i]+=levelscores[i]
+}
 function finish(){
   bnext.classList.remove("hidden")
   pause()
+  showScores(levelscores)
+}
+function showScores(scores){
+  dscores.innerHTML="runtime:"+scores[0]+"<br>edit distance:"+scores[1]
 }
 
 //setPuzzle(0)
