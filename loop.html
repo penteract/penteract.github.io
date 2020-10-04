@@ -50,6 +50,9 @@ input{
   color: black;
   background: #0f0;
 }
+.target{
+  background: #888;
+}
 .disabled{
   appearance: textfield;
 }
@@ -59,7 +62,6 @@ button{
   font-size: 1em;
   border-color: #080;
   width: 5em;
-
 }
   </style>
 
@@ -68,11 +70,13 @@ button{
 +[>-]
 +<<+[>>>>+<<]
 multiplication by 3;------>+++++[[-<+++>]<]
+is it 5?;+[-----[[-]>+<]>]
 fib;+<---[++++>[-<+<+>>]<<----]
 multiplication;------------>>+[[->[-<<+<+>>>]<<[->>+<<]>]<+<]
-
+not a power of 2;+[ [[-<+>]<<+>>]<<-[]> [->+<<++ [<+<<<]>>>-[<<[<<<<<<]>>]>>] <]
+a power of 2 bigger than 4;+[ [-[-[-[-[[-<+>]<++++>>+<]]]]]>-[]<<  ]
 +[The End[-]+]</script>
-<!-- +++<<<+[[->>>>+<+++<<<]>>>>[>+<[-]]>[]<<-] -->
+<!-- under construction: xor;+[[-<+>>++<]>] -->
 
 </head>
 <body>
@@ -92,7 +96,7 @@ multiplication;------------>>+[[->[-<<+<+>>>]<<[->>+<<]>]<+<]
 <button onclick="reset()">reset</button>
 <button onclick="stepAndDraw()">step</button>
 <button onclick="run()" id="run">run</button>
-<button onclick="run(10)" id="faster">faster</button>
+<button onclick="run(50)" id="faster">faster</button>
 <button onclick="fastest(997)" id="fastest">fastest</button>
 <button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
@@ -130,8 +134,11 @@ function setPuzzle(n){
     cell.id="p"+x
     cell.classList.add("command")
     rprog.appendChild(cell)
+    let k=x
+    cell.addEventListener("click",function(e) {setTarget(k)})
     x+=1
   }
+
   dp=0
   pp=0
   data=[]
@@ -160,11 +167,26 @@ function setPuzzle(n){
   bnext.classList.add("hidden")
   if(pz[pz.length-2]=="]"){
     target=getOpening(pz.length-2)+1
+    starting=true
     running=false
     clearTimeout(window.runner)
     run()
   }
   else{throw new Error("bad level (does not end in ']')")}
+}
+
+function setTarget(n){
+  if(!starting){
+    if (target!=undefined)
+      document.getElementById("p"+n).classList.remove("target")
+    if(target==n)
+      target=undefined
+    else{
+      target=n
+      if (target!=undefined)
+        document.getElementById("p"+n).classList.add("target")
+    }
+  }
 }
 
 function getMatching(pos,symbol,direction){
@@ -219,6 +241,14 @@ function step(){
   }
   pp+=1
   if(pp+1==pz.length)finish()
+  if(pp==target){
+    if(starting){
+      enableInput()
+      target=undefined
+      starting=false
+    }
+    pause()
+  }
 }
 function stepAndDraw(){
   if(pp+1>=pz.length){return}
@@ -230,11 +260,6 @@ function stepAndDraw(){
   document.getElementById("p"+pp).classList.add("highlight")
   effect.play()
   effect.fastSeek(0)
-  if(pp==target){
-    enableInput()
-    target=undefined
-    pause()
-  }
 }
 function fastest(n){
   if(pp+1>=pz.length){return}
@@ -242,18 +267,13 @@ function fastest(n){
   running=true
   brun.innerText="pause"
   function f(){
-    runner = setTimeout(f,30)
+    runner = setTimeout(f,5)
     document.getElementById("p"+pp).classList.remove("highlight")
     for (let i=0;i<n && running;i++) step()
     for(x of dataShown){
       document.getElementById("d"+x).value=data[dp+x]
     }
     document.getElementById("p"+pp).classList.add("highlight")
-    if(pp==target){
-      enableInput()
-      target=undefined
-      pause()
-    }
   }
   setTimeout(f,30)
 }
