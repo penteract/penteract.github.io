@@ -39,8 +39,15 @@ div.command{
   display: none;
 }
 input{
+  font-size: inherit;
+}
+input[type="range"]{
+  position: relative;
+  bottom:-0.33em;
+  width: 5em;
+}
+.data{
   width: 3em;
-  font-size: 1em;
   color: #0f0;
   background: black;
   border: none;
@@ -63,20 +70,29 @@ button{
   border-color: #080;
   width: 5em;
 }
+hr{
+  width: 100%;
+  height: 0px;
+  visibility:hidden;
+  margin: 1px;
+}
   </style>
-
 <script type="text/brainstuck" id="puzzles">+[ ]
 -[--]
 +[>-]
 +<<+[>>>>+<<]
-multiplication by 3;------>+++++[[-<+++>]<]
+multiplication by 3;++++++>+++++[[-<--->]<]
 is it 5?;+[-----[[-]>+<]>]
 fib;+<---[++++>[-<+<+>>]<<----]
-multiplication;------------>>+[[->[-<<+<+>>>]<<[->>+<<]>]<+<]
-not a power of 2;+[ [[-<+>]<<+>>]<<-[]> [->+<<++ [<+<<<]>>>-[<<[<<<<<<]>>]>>] <]
-a power of 2 bigger than 4;+[ [-[-[-[-[[-<+>]<++++>>+<]]]]]>-[]<<  ]
-+[The End[-]+]</script>
-<!-- under construction: xor;+[[-<+>>++<]>] -->
+multiplication;++++++++++++>>+[[->[-<<+<->>>]<<[->>+<<]>]<+<]
+not a power of 2;+[ [[-<+>]<<+>>]<<-[]#>[->+<<++ [<+<<<]>>>-[<<[<<<<<<]>>]>>] <]
+triangles;+++++++++++<<<+[+++#[-[-<+>]<[->+>>>-<<<<]>]#>[-[-<+>]<[->+>>-<<<]>]#>[-[-<+>]<[->+>-<<]>]#>]
++[The End:[-]+]</script>
+
+<script type="text/brainstuck" id="incompletepuzzles">
+something bigger than 4;+[ [-[-[-[-[[-<+>]<++++>>+<]]]]]>-[]<<#[4->3+<<5++ [<6+<<<9]95>>>62-[2+<<4]64>>]]
+xor;+[[-<+>>++<]>]
+</script>
 
 </head>
 <body>
@@ -96,8 +112,9 @@ a power of 2 bigger than 4;+[ [-[-[-[-[[-<+>]<++++>>+<]]]]]>-[]<<  ]
 <button onclick="reset()">reset</button>
 <button onclick="stepAndDraw()">step</button>
 <button onclick="run()" id="run">run</button>
-<button onclick="run(50)" id="faster">faster</button>
-<button onclick="fastest(997)" id="fastest">fastest</button>
+<!--<button onclick="run(50)" id="faster">faster</button>
+<button onclick="fastest(99991)" id="fastest">fastest</button>-->
+<nobr><label for=speed>speed</label>&nbsp;<input type=range id=speed min=0 max=60 value=0 /></nobr>
 <button id=next onclick="setPuzzle(puznum+1)">next</button>
 </div>
 <script type="text/javascript">
@@ -113,6 +130,8 @@ rprog = document.getElementById("program")
 rdat = document.getElementById("data")
 bnext = document.getElementById("next")
 brun = document.getElementById("run")
+ispeed=document.getElementById("speed")
+
 dataShown = [-3,-2,-1,0,1,2,3]
 editable = [0,1,2]
 effect=new Audio("thunk3.wav")
@@ -128,16 +147,35 @@ function setPuzzle(n){
   rprog.innerHTML=""
   rdat.innerHTML=""
   let x=0
+  let nesting=0
   for(c of pz){
-    let cell = document.createElement("div")
-    cell.innerText=c
-    cell.id="p"+x
-    cell.classList.add("command")
-    rprog.appendChild(cell)
-    let k=x
-    cell.addEventListener("click",function(e) {setTarget(k)})
-    x+=1
+    if(c=="[")nesting+=1
+    if(c=="]")nesting-=1
+    if(c=="#"){
+      let cell=document.createElement("hr")
+      rprog.appendChild(cell)
+      for(let i=0;i<nesting;i++){
+        cell=document.createElement("div")
+        cell.innerText=" "
+        cell.classList.add("command")
+        rprog.appendChild(cell)
+      }
+    }
+    else{
+      let cell = document.createElement("div")
+      cell.innerText=c
+      cell.id="p"+x
+      cell.classList.add("command")
+      let k=x
+      cell.addEventListener("click",function(e) {
+        if (!starting)
+          setTarget(k)
+      })
+      x+=1
+      rprog.appendChild(cell)
+    }
   }
+  pz=pz.replaceAll("#","")
 
   dp=0
   pp=0
@@ -150,6 +188,7 @@ function setPuzzle(n){
     i.value="0"
     i.id="d"+x
     //i.disabled="true"
+    i.classList.add("data")
     if(x==0)i.classList.add("highlight")
     i.addEventListener("input",function(e) {
       data[dp+x]=i.value&255;
@@ -176,16 +215,14 @@ function setPuzzle(n){
 }
 
 function setTarget(n){
-  if(!starting){
+  if (target!=undefined)
+    document.getElementById("p"+target).classList.remove("target")
+  if(target==n)
+    target=undefined
+  else{
+    target=n
     if (target!=undefined)
-      document.getElementById("p"+n).classList.remove("target")
-    if(target==n)
-      target=undefined
-    else{
-      target=n
-      if (target!=undefined)
-        document.getElementById("p"+n).classList.add("target")
-    }
+      document.getElementById("p"+target).classList.add("target")
   }
 }
 
@@ -202,14 +239,14 @@ function getOpening(n){
   return getMatching(n,"[",-1)
 }
 function getClosing(n){
-  return getMatching(n,"]",1)//When getMatching used while(true) and this was mistakenly -1,
+  return getMatching(n,"]",1)//When getMatching used while(true) and this was mistakenly -1,...
 }
 function reset(){
   setPuzzle(puznum)
 }
 
 function step(){
-  disableInput()
+  if(!noInput)disableInput()
   switch(pz[pp]){
     case "+":
       data[dp]=(data[dp]+1)&255
@@ -244,7 +281,7 @@ function step(){
   if(pp==target){
     if(starting){
       enableInput()
-      target=undefined
+      setTarget(undefined)
       starting=false
     }
     pause()
@@ -278,9 +315,7 @@ function fastest(n){
   setTimeout(f,30)
 }
 
-function run(delay){
-  if (!delay) delay=1000
-  else{pause()}
+function run(){
   if(running){
     clearTimeout(runner)
     brun.innerText="run"
@@ -288,12 +323,33 @@ function run(delay){
   else{
     brun.innerText="pause"
     function f(){
-      runner = setTimeout(f,delay)
-      stepAndDraw()
+      if(pp+1>=pz.length){return}
+      //calculate fps
+      let fps = Math.pow(2,ispeed.value/2)
+      let mspf = 1000/fps
+      let stepspf=1
+      let framedelay=mspf
+      if (mspf<5){
+        framedelay=5
+        let k= (framedelay/mspf)
+        stepspf=k|0
+        if (Math.random()<k-stepspf) stepspf+=1
+      }
+      //console.log(framedelay,stepspf)
+      runner = setTimeout(f,framedelay)
+      document.getElementById("p"+pp).classList.remove("highlight")
+      for (let i=0;i<stepspf && running;i++) step()
+      for(x of dataShown){
+        document.getElementById("d"+x).value=data[dp+x]
+      }
+      document.getElementById("p"+pp).classList.add("highlight")
+      if(fps<20){
+        effect.play()
+        effect.fastSeek(0)
+      }
     }
     runner = setTimeout(f,10)
   }
-
   running = !running
 }
 function pause(){
