@@ -1,0 +1,25 @@
+//if something moved is an argument, and it's not moved far enough;  snap back into place
+ (if moved a long enough distance, consider making it a floating term again)
+
+
+//If something is moved onto the background, take it out of the argument slot
+  //put it back safely
+ (treat the background as a hole?)
+
+//check context properly
+
+
+ctrl-click to copy
+delete key to delete (right click)?
+
+allow floating terms
+
+make types line up better
+ (make exact matches fit; think about which holes to count)
+
+zoom/pan
+
+Longer term:
+do something with data type declarations
+get polymorphic types working
+integrate with Haskell
