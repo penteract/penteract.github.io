@@ -7,6 +7,7 @@
   <script src="Parser.js">  </script>
   <script src="hsluv-0.1.0.min.js">  </script>
   <script src="Paths.js">  </script>
+  <script src="Printing.js">  </script>
   <script type="text/javascript">
 "use strict";
 let SVGNS = "http://www.w3.org/2000/svg"
@@ -221,21 +222,69 @@ function makeFloating(g,target,savepos){
 
 // Do the work of moving filling a hole with an argument
 function fillHole(argument, hole){
-  /*if (typeEq(argtype,holetype)){//TODO: look more carefully at the details of what's already filled in
-    //This case should be easy
-  }*/
     //If something moves, need to check hereditarily that everything is still in scope
   let oldPar = argument.parentElement
   detatch(argument)
-  hole.filled=argument
+  hole.filled = argument
   hole.appendChild(argument)
   if(!oldPar.contains(hole)){//If it does, we don't need to check recursively
     checkScope(argument)
+  }//doing this before matching types hopefully saves some headaches
+  let match = isNearPerfectMatch(argument,hole)
+  for(let i=1; i<match.length; i++){//Start at 1 because
+    let s=match[i][0]
+    let h=match[i][1]
+    detatch(s)
+    h.filled = s
+    h.appendChild(s)
+    redraw(h)
   }
   redraw(hole)
   return true
 }
 
+function getHoles(g){
+  if(g.isHole) throw "expected to be called on non-holes"
+  let result = []
+  for (let hole of g.floating){
+    let fill = hole.filled
+    if(fill) result = result.concat(getHoles(fill))
+    else result.push(hole)
+  }
+  return result
+}
+
+//check if a shape as currently filled lines up perfectly with a hole (and the things floating in it)
+function isPerfectMatch(shape,hole){
+  if(shape.baseType!==hole.baseType)return false
+  let innerHoles = getHoles(shape)
+  let pairs = [[shape,hole]]
+  let i = 0
+  for(let arg of hole.floating)if(arg){
+    if(i>=innerHoles.length) return false
+    let m = isPerfectMatch(arg,innerHoles[i++])
+    if(!m) return false
+    pairs = pairs.concat(m)
+  }
+  if(i<innerHoles.length) return false
+  return pairs
+}
+
+//check if an initial segment of a shape's holes line up with an initial segment of a hole's floating terms
+//Note: this is not recursive - for children it calls isPerfectMatch
+function isNearPerfectMatch(shape,hole){
+  if(shape.baseType!==hole.baseType)return false
+  let innerHoles = getHoles(shape)
+  let pairs = [[shape,hole]]
+  let i = 0
+  for(let arg of hole.floating)if(arg){
+    if(i>=innerHoles.length) break
+    let m = isPerfectMatch(arg,innerHoles[i++])
+    if(!m) break
+    pairs = pairs.concat(m)
+  }
+  return pairs
+}
 
 
 function checkScope(g){
@@ -260,7 +309,6 @@ function checkScope(g){
 // When something would become out of context, snap it back to its owner
 function snapback(g){
   console.log(g.text,"+",g.parentElement.text)
-  if(!isArg(g))throw "Expected to have been an argument"
   makeFloating(g,g.owner,false)
 }
 
@@ -296,7 +344,7 @@ function unfill(g){
 }
 
 
-// Puts everything back in its place
+// Puts everything at or above the given node's children back in its place
 //TODO: don't make it reset everything else - have things remember where they started and adjust them based on the changes to that.
 function redraw(g){
   if(!g || g===svg)return false
@@ -339,6 +387,7 @@ function redraw(g){
       hasch?
         filledHolePath(fw,0,g.w-fw,minh,g.filled.baseType):
         simplePath(0,0,fw,minh,g.filled.baseType))
+    //Does not set g.drawnh, but this does not matter for holes
   }
   else redrawBox(g,minh)
   redraw(g.parentElement)
@@ -347,88 +396,6 @@ function redraw(g){
 function redrawBox(g,h){
   g.drawnh=h
   g.children[0].setAttribute("d",simplePath(0,0,g.w,h,g.baseType))
-}
-
-function makeVarname(lamIndex,ownerIndex){
-  return `x${lamIndex}v${ownerIndex}`
-}
-
-let lamCount = 0
-function printTerm(g){
-  let result = ""
-  let parenthesize = false
-  if (g.isHole){
-    g.lamIndex = lamCount++
-    let numArgs = 0
-    let hasFloating = false
-    for(let i=0; i<g.floating.length; i++){
-      let float = g.floating[i]
-      if(float===undefined || (float.owner===g && float.ownerIndex===i)){
-        numArgs += 1
-      }
-      if(float!==undefined){
-        hasFloating = true
-      }
-    }
-    if(numArgs>0){
-      parenthesize = true
-      result = "\\ "
-      for (let i=0; i<numArgs; i++){
-        result += makeVarname(g.lamIndex,i)+" "
-      }
-      result += "-> "
-    }
-    if(hasFloating || !g.filled){
-      result +=  "_ " //Haskell hole indicating that something is incomplete.
-      //Generated terms without these holes SHOULD NOT have type errors
-    }
-    if (g.filled){
-      result += printTerm(g.filled)
-    }
-    if (hasFloating){
-      parenthesize=true
-      for(let i=0; i<g.floating.length; i++){
-        let float = g.floating[i]
-        if(float!==undefined){
-          result += printTerm(float)
-        }
-      }
-    }
-  }
-  else{
-    if(!g.text){
-      if (g.owner===svg){
-        throw "top level boxes expected to have text"
-      }
-      let lamIndex = g.owner.lamIndex
-      if(lamIndex===undefined){
-        throw "Either printTerm was called on a non-top-level box or something has gone wrong"
-      }
-      result = makeVarname(lamIndex,g.ownerIndex) + " "
-    }
-    else{
-      result = g.text + " "
-    }
-    let atArg = 0
-    if(isInfix(g.text)){
-      while(atArg<g.floating.length && atArg<2){
-        let arg = g.floating[atArg++]
-        if(atArg==1) result = printTerm(arg)+" "+result
-        else result+=printTerm(arg)
-      }
-      result="("+result+")"
-    }
-    if(g.floating.length>atArg){
-      parenthesize=true
-      while(atArg<g.floating.length ){
-        result+=printTerm(g.floating[atArg++])
-      }
-    }
-  }
-  if(parenthesize){
-    result=`(${result})`
-  }
-  return result
 }
 
   </script>
@@ -512,7 +479,14 @@ function quick(n,ty){
 
 GAME="Action->Event->GameState->GameState"
 GEGSTO="Action->Event->GameState->"
-RULE=`(${GAME})->${GAME}`
+RULE=`((${GAME})->${GAME})`
+/*
+quick("when",`(${GEGSTO}Bool)->${RULE}->${RULE}`)
+quick("cardIs",`(Card->Bool)->${GEGSTO}Bool`)
+quick("Eight",`Rank`)
+quick("rank","Card->Rank")
+quick("==","Rank->Rank->Bool")
+quick("skipNextTurn",`${RULE}`)*/
 
 //quick("when",`${GEGSTO}Bool->${RULE}->${RULE}`)
 
@@ -522,8 +496,9 @@ quick("+","Int->Int->Int")
 quick("negate","Int->Int")
 quick("xs","ListInt")
 quick("5","Int")
-
-
+for(let i=1; i<svg.children.length; i++){
+  svg.children[i].setxy(0,i*15)
+}
 
 </script>
 
