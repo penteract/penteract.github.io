@@ -29,6 +29,10 @@ CLOSEPAREN=3
 SYMBOL=4
 WORD=5
 
+function isInfix(s){
+  return s.match(/^(?:\p{M}|\p{S}|\p{P})+$/u)
+}
+
 function partition(s){
   // Split a string into parenthesised parts, and by spaces in unparenthesised parts recursively
   var seen=[]

@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
-<!--Theorem - in simply typed lambda calculus, every term can be constructed under a certain version of this program (not yet the current version)-->
+<!--Theorem - in simply typed lambda calculus, every term is beta equivalent to one under a certain version of this program (not yet the current version) -->
 <head>
   <meta charset="utf-8">
   <title>TypeBlocks</title>
   <script src="Parser.js">  </script>
+  <script src="hsluv-0.1.0.min.js">  </script>
+  <script src="Paths.js">  </script>
   <script type="text/javascript">
-var SVGNS = "http://www.w3.org/2000/svg";
+"use strict";
+let SVGNS = "http://www.w3.org/2000/svg"
 
 
 // Uses object identity. Should work
@@ -17,8 +20,8 @@ var SVGNS = "http://www.w3.org/2000/svg";
 }*/
 
 function hash(str){
-  var n=0
-  for (var i=0;i<str.length;i++){
+  let n=0
+  for (let i=0;i<str.length;i++){
     n=(n*31)%1000000007
     n+=str.charCodeAt(i)
   }
@@ -36,99 +39,8 @@ function typeEq(s,t){
   }*/
 }
 
-function diff([x1,y1],[x2,y2]){
-  return [x1-x2,y1-y2]
-}
-function add([x1,y1],[x2,y2]){
-  return [x1+x2,y1+y2]
-}
-function mul([x1,y1],k){
-  return [x1*k,y1*k]
-}
-
-//features that could be represented  by types:
-
-//ways to represent them:
-//colour (curr)
-//shape of box (4 different edges)
-// ideas: type variables as wavy lines
-//  in higher kinded types, eg "List Int", sides represent List and top/bottom represent Int
-//animation?
-
-
-// top edges
-caret =["L",[50,-40],"L",[100,0]]
-point =["L",[40,0], "L",[50,-40], "L",[60,0], "L",[100,0]]
-square =["L",[30,0], "L",[30,-40], "L",[70,-40], "L",[70,0], "L",[100,0]]
-curve =["C",[25,25],[75,-90],[100,0]]
-curve2 =["C",[25,25],[25,-70],[50,0],"C",[75,25],[75,-70],[100,0]]
-circ = ["L", [40,0], "A", ["scale",10,10], "0 1 0", [40, 0.001], "L", [100, 0]]
-
-shapes=[caret,point,square,curve,curve2] //,circ]
-
-
-function makePath(name,start,end){
-  if (name=="line"){
-    return `L ${end[0]} ${end[1]}`
-  }
-  var [dx,dy] = diff(end,start)
-  scale = Math.hypot(dx,dy)
-  dx/=100
-  dy/=100
-  pts=[]
-  for (p of shapes[hash(name)%shapes.length]){
-    if (Array.isArray(p)){
-      if (p[0]==="scale"){
-        var[x,y]=p.slice(1)
-        y=y*13/scale
-        pts.push([x*dx+y*dy, x*dy-y*dx].join(" "))
-      }else{
-        var [x,y]=p
-        y=y*5/scale
-        pts.push(add(start,[x*dx+y*dy, x*dy-y*dx]).join(" "))
-      }
-    }
-    else pts.push(p)
-  }
-  return pts.join(" ")+" "
-}
-MARX=3// Rise up!
-MARY=3
-BASEHEIGHT=7//with text (vertical center is BASEHEIGHT/2)
-
-// Given starting coordinates and a base type, make a path
-function simplePath(x,y,w,h,type){
-  y = y-(BASEHEIGHT-h)/2
-  bl = [x-MARX,y+MARY]
-  br = [x+w+MARX,y+MARY]
-  tr = [x+w+MARX,y-h-MARY]
-  tl = [x-MARX,y-h-MARY]
-  var pth = "M "+bl[0]+" "+bl[1]+" "+
-    makePath(type,bl,br) +
-    makePath(type,br,tr) +
-    makePath(type,tr,tl) +
-    makePath(type,tl,bl) +"Z "
-  return pth
-}
-function filledHolePath(x,y,w,h,type){
-  y = y-(BASEHEIGHT-h)/2
-  bl = [-MARX,y+MARY]
-  bm = [x+MARX,y+MARY]
-  br = [x+w+MARX,y+MARY]
-  tr = [x+w+MARX,y-h-MARY]
-  tm = [x+MARX,y-h-MARY]
-  tl = [-MARX,y-h-MARY]
-  var pth = "M "+bl[0]+" "+bl[1]+" "+
-    makePath(type,bl,bm) +
-    makePath("line",bm,br) +
-    makePath("line",br,tr) +
-    makePath("line",tr,tm) +
-    makePath(type,tm,tl) +
-    makePath(type,tl,bl) +"Z "
-  return pth
-}
-
 function setxy(x,y){
+  if(x===undefined) throw "e"
   this.x=x
   this.y=y
   this.setAttribute("transform",`translate(${x},${y})`)
@@ -137,107 +49,65 @@ function changexy(x,y){
   this.setxy(this.x+x, this.y+y)
 }
 function getClientXY(){
-  var m = this.parentElement.getCTM()
+  let m = this.parentElement.getCTM()
   return [this.x*m.a+this.y*m.c+m.e,this.x*m.b+this.y*m.d+m.f]
 }
 function setClientXY(x,y){
-  console.log(x,y)
   m = this.parentElement.getCTM().inverse()
   this.setxy(x*m.a+y*m.c+m.e,x*m.b+y*m.d+m.f)
 }
 
 function subBox(text,type,cols,altCols){
-  var g = document.createElementNS(SVGNS,"g")
-  gg=g
+  let g = document.createElementNS(SVGNS,"g")
   g.type = type
   g.text = text
+
   g.setxy=setxy // I'm probably meant to use prototype
   g.changexy=changexy
   g.getClientXY=getClientXY
   g.setClientXY=setClientXY
+
   if(g.isHole = cols[1]=="none")
     g.filled = false
-  var width = text?getLength(text):0
-  var minh = text?BASEHEIGHT:0
-  g.args=[]
-  while(!isBase(type)){
-    assertEq(type.length,2)
-    var [arg,type]=type
-    ch=subBox("",arg,altCols,cols)
-    ch.setxy(width+MARX*2,0)
-    minh=Math.max(minh,MARY*2+ch.h)
-    g.args.push(ch)
-    ch.owner=g
-    ch.ownerIndex=g.args.length-1
-    width+=MARX*4+ch.w
-  }
-  g.baseType=type
-  pth = simplePath(0,0,width,minh,type)
+
+  //let width = text?getLength(text):0
+  //let minh = text?BASEHEIGHT:0
+  let pth = ""//simplePath(0,0,width,minh,type)
   g.innerHTML += `<path d="${pth}" fill="${cols[0]}" stroke="${cols[1]}" fill-rule="evenodd"> </path> `
   if(text) g.innerHTML+=`<text font-size="10"> ${text}</text> `
-  for(let ch of g.args){
+  g.floating = []
+  while(!isBase(type)){
+    assertEq(type.length,2)
+    var [arg,type] = type
+    let ch=subBox("",arg,altCols,cols)
+    g.floating.push(ch)
+    ch.owner=g
+    ch.ownerIndex=g.floating.length-1
     g.appendChild(ch)
   }
-  g.w=width
-  g.h=minh
+  g.baseType=type
   g.x=0
   g.y=0
   if(!g.isHole) g.addEventListener("mousedown",startDrag(g))
+  redraw(g)
   return g
 }
 function makeBox(text,type, x,y,w,h){
-  var c = Math.random()*360
-  var fill = `hsl(${c},100%,50%)`
-  var stroke = `hsl(${c},50%,70%)`
-  var g = subBox(text,type,[fill,stroke],["#DDD","none"])
+  let c = Math.random()*360
+  let fill = hsluv.hsluvToHex([c,100,60]) //`hsl(${c},100%,50%)`
+  let stroke =  hsluv.hsluvToHex([c,50,70])//`hsl(${c},50%,70%)`
+  let g = subBox(text,type,[fill,stroke],["#DDD","none"])
   svg.appendChild(g)
-  svg.args.push(g)
+  svg.floating.push(g)
   g.owner=svg
-  g.ownerIndex=svg.args.length-1
-  return pth
+  g.ownerIndex=svg.floating.length-1
 }
 
 
-//The 2 fundamental rearranging operations are putting something in a hole and
-// snapping something back to its original position.
+//The 2 fundamental rearranging operations are putting an argument into a hole (filling it) and
+// making something a floating within a hole.
 //Each may cause subterms to become out of scope and recursively need to snap back
 
-function checkScope(g){
-  if(g.isHole){
-    if(g.filled)checkScope(g.filled)
-  }
-  else{
-    if(!g.owner.contains(g.parentElement)){//out of scope
-      snapback(g)
-    }
-  }
-  for (ch of g.args){
-    checkScope(ch)
-  }
-}
-
-//Assumed to be called by checkScope, revisit if reused
-function snapback(g){
-  if(!isArg(g))throw "Expected to have been an argument"
-  unfill(g.parentElement)
-  var owner = g.owner
-  owner.appendChild(g)
-  owner.args[g.ownerIndex] = g
-  /*TODO: something like this, but position the current element correctly
-  for(i=g.ownerIndex;i<owner.args.length;i++){
-    owner.args[i].changexy(g.w+4*MARX,0)
-  }*/
-  redraw(owner)
-}
-
-function snapout(g){
-  g.owner.args[g.ownerIndex]=undefined
-  redraw(g.owner)
-}
-function unfill(g){
-  g.filled = false
-  redraw(g)
-}
 
 //Type stuff
 //Strong match: exact match
@@ -245,7 +115,7 @@ function unfill(g){
 
 //given a type, return a pair consisting of a list of arguments and a result
 function decompose(t){
-  var args=[]
+  let args=[]
   while(!isBase(t)){
     var [arg,t] = t
     args.push(arg)
@@ -253,87 +123,113 @@ function decompose(t){
   return [args,t]
 }
 function checkMatch(s,t){
-  var [sargs,sres] = decompose(s)
-  var [targs,tres] = decompose(t)
+  let [sargs,sres] = decompose(s)
+  let [targs,tres] = decompose(t)
   return sres==tres
 }
 
 function isArg(g){
-  var a = g.parentElement.filled===g
-  var b = g.owner.args[g.ownerIndex]!==g
-  if(a!==b) throw "invariant violated"
+  let a = g.parentElement.filled===g
   return a
 }
 
 /*function getMatch(s,t){
-  var [sargs,sres] = decompose(s)
-  var [targs,tres] = decompose(s)
+  let [sargs,sres] = decompose(s)
+  let [targs,tres] = decompose(s)
   if (sres!=tres){
     return false
   }
   if(sargs.length==targs.length){
     sargs.map(function(sarg,i){
-      var targ=targs[i]
+      let targ=targs[i]
     })
   }
 }*/
-function makeFloatingArg(argument,hole){
-  if(isArg(argument)){
-    var [x,y] = argument.getClientXY()
-    snapback(argument)
-    for (ch of argument.args){
-      checkScope(ch)
-    }
-    argument.setClientXY(x,y)
-    return true
-  }
-  return false //safe, no concern
-}
 
 function dragInto(argument,hole){
-  if (!hole.isHole){
+  console.log(argument.text,"-->", hole.text)
+  if(!argument.owner.contains(hole)){
+    if (hole===argument.owner.parentElement){
+      //Let something be made floating by dragging it just outside its context
+      return makeFloating(argument,argument.owner)
+    }
+    console.log("out of scope") // consider snapping argument back to where it came from
+    // alternatively, consider putting the new context into this hole (if possible)
     return false
   }
-  if(!argument.owner.contains(hole)){
-    console.log("out of scope")
+  if (!hole.isHole){
+    if(isArg(argument)){
+      if (argument.parentElement.parentElement===hole){
+        // if you drag a filled argument just outside its hole, make it float
+        return makeFloating(argument,argument.parentElement)
+      }
+    }
     return false
   }
   else if(hole.filled){
-    if (hole===argument.owner){
-      return makeFloatingArg(argument,hole)
-    }
-    console.log("Already filled")
-    return false
+    return makeFloating(argument,hole)
   }
+
   if(!checkMatch(argument.type,hole.type)){
+    if (hole===argument.owner && hole!==argument.parentElement){
+      // allow bound letiables to be returned to their holes if not already there
+      return makeFloating(argument,hole)
+    }
     console.log("Type mismatch")
     return false
   }
   else{
+    //If the types match and there's no other reason not to, go ahead and fill the hole
     return fillHole(argument,hole)
   }
 }
+// Do the work of taking something out of where it came from and putting it (floating) somewhere else
+function makeFloating(g,target,savepos){
+  if (!target.isHole) throw "Things should only float in holes"
 
-//Check that the types are compatible and do the best you can to jam it in
-//
-//Strategy: If there is an unambiguous ordered bijection between (((a subset of the argument's holes) and (the hole's arguments)) ^or^ ((the argument's holes) and (a subset of the hole's arguments)) then go for it; otherwise, if the final types line up, stick with that.
-// a bijection is ambiguous if there is another one that does not involve a strict subset of chosen argument set
+  if(g.parentElement!==g.target || isArg(g)){
+    if (savepos===undefined) savepos=(target===svg)
+    let [x,y] = g.getClientXY()
+    detatch(g)
+    if(target===g.owner){
+      if(target.floating[g.ownerIndex]!==undefined){
+        throw "Should not happen until I've added duplication"
+        remove(g)
+        return
+      }
+      target.floating[g.ownerIndex] = g
+    }
+    else{
+      target.floating.push(g)
+    }
+    target.appendChild(g)
+
+    /*TODO: something like this, but position the current element correctly
+    for(i=g.ownerIndex;i<owner.args.length;i++){
+      owner.args[i].changexy(g.w+4*MARX,0)
+    }*/
+    for (let ch of g.floating){
+      checkScope(ch)
+    }
+    redraw(target)
+    if(savepos) g.setClientXY(x,y)
+  }
+}
+
+// future Strategy: If there is an unambiguous ordered bijection between (((a subset of the argument's holes) and (the hole's arguments)) ^or^ ((the argument's holes) and (a subset of the hole's arguments)) then go for it; otherwise, if the final types line up, stick with that.
+//   a bijection is ambiguous if there is another one that does not involve a strict subset of chosen argument set
+
+// Do the work of moving filling a hole with an argument
 function fillHole(argument, hole){
   /*if (typeEq(argtype,holetype)){//TODO: look more carefully at the details of what's already filled in
     //This case should be easy
   }*/
     //If something moves, need to check hereditarily that everything is still in scope
-  oldPar = argument.parentElement
-  if(isArg(argument)){
-    unfill(oldPar)
-  }
-  else{
-    snapout(argument)
-  }
+  let oldPar = argument.parentElement
+  detatch(argument)
   hole.filled=argument
   hole.appendChild(argument)
-  if(!oldPar.contains(hole)){
-    console.log("checking scope")
+  if(!oldPar.contains(hole)){//If it does, we don't need to check recursively
     checkScope(argument)
   }
   redraw(hole)
@@ -341,27 +237,95 @@ function fillHole(argument, hole){
 }
 
 
+
+function checkScope(g){
+  if(g.isHole){
+    if(g.filled)checkScope(g.filled)
+  }
+  else{
+    if(!g.owner.contains(g.parentElement)){//out of scope
+      //TODO: think more carefully about where it should go - should it just go
+        // up to the nearest legal hole (nearest before the move that caused checkscope),
+        // rather than all the way up to its owner?
+      //
+      snapback(g)
+      return
+    }
+  }
+  for (let ch of g.floating) if(ch){
+    checkScope(ch)
+  }
+}
+
+// When something would become out of context, snap it back to its owner
+function snapback(g){
+  console.log(g.text,"+",g.parentElement.text)
+  if(!isArg(g))throw "Expected to have been an argument"
+  makeFloating(g,g.owner,false)
+}
+
+
+function detatch(g){
+  if(isArg(g)){
+    unfill(g.parentElement)
+  }else{
+    unfloat(g)
+  }
+}
+
+
+function unfloat(g){
+  let holder=g.parentElement
+  let index = holder.floating.indexOf(g)
+  if(index == -1) throw "expected to be in floating list"
+  if(holder===g.owner && g.ownerIndex==index)// think about duplicates
+    holder.floating[index]=undefined
+  else{
+    holder.floating.splice(index,1)
+  }
+  redraw(holder)
+}
+function unfill(g){
+  let arg = g.filled
+  g.removeChild(arg)
+  g.filled = false
+  redraw(g)
+  if(arg.drawnh!==arg.h){
+    redraw(arg)
+  }
+}
+
+
 // Puts everything back in its place
 //TODO: don't make it reset everything else - have things remember where they started and adjust them based on the changes to that.
 function redraw(g){
-  if(g===svg)return false
-  var width = g.text?Math.max(getLength(g.text),BASEHEIGHT):0
-  var minh = g.text?BASEHEIGHT:0
+  if(!g || g===svg)return false
+  let width = 0
+  if(!isInfix(g.text)){
+    if(g.text)width+=getLength(g.text)
+  }
+  let minh = g.text?BASEHEIGHT:0
 
   if(g.filled){
     g.filled.setxy(0,0)
     width+=g.filled.w
     minh=Math.max(minh,g.filled.h)
   }
-  var hasch = false
-  for(ch of g.args)if(ch){
-    if(!ch.parentElement===g) throw "not parent of child (child probably did not remove themselves correctly)"
+  let hasch = false
+  for(let ch of g.floating)if(ch){
+    if(ch.parentElement!==g) throw "not parent of child (child probably did not remove themselves correctly)"
     if(g.filled && !hasch){
       width+=MARX
     }
-    hasch=true
     ch.setxy(width+2*MARX,0)
     width+=ch.w+MARX*4
+    if(!hasch){
+      if(isInfix(g.text)){
+        g.children[1].setAttribute("transform",`translate(${width},0)`)
+        width+=getLength(g.text)
+      }
+    }
+    hasch=true
     minh=Math.max(minh,MARY*2+ch.h)
   }
   g.w=width
@@ -370,7 +334,7 @@ function redraw(g){
     redrawBox(g.filled,minh)
   }
   if (g.filled){
-    var fw=g.filled.w
+    let fw=g.filled.w
     g.children[0].setAttribute("d",
       hasch?
         filledHolePath(fw,0,g.w-fw,minh,g.filled.baseType):
@@ -383,6 +347,88 @@ function redraw(g){
 function redrawBox(g,h){
   g.drawnh=h
   g.children[0].setAttribute("d",simplePath(0,0,g.w,h,g.baseType))
+}
+
+function makeVarname(lamIndex,ownerIndex){
+  return `x${lamIndex}v${ownerIndex}`
+}
+
+let lamCount = 0
+function printTerm(g){
+  let result = ""
+  let parenthesize = false
+  if (g.isHole){
+    g.lamIndex = lamCount++
+    let numArgs = 0
+    let hasFloating = false
+    for(let i=0; i<g.floating.length; i++){
+      let float = g.floating[i]
+      if(float===undefined || (float.owner===g && float.ownerIndex===i)){
+        numArgs += 1
+      }
+      if(float!==undefined){
+        hasFloating = true
+      }
+    }
+    if(numArgs>0){
+      parenthesize = true
+      result = "\\ "
+      for (let i=0; i<numArgs; i++){
+        result += makeVarname(g.lamIndex,i)+" "
+      }
+      result += "-> "
+    }
+    if(hasFloating || !g.filled){
+      result +=  "_ " //Haskell hole indicating that something is incomplete.
+      //Generated terms without these holes SHOULD NOT have type errors
+    }
+    if (g.filled){
+      result += printTerm(g.filled)
+    }
+    if (hasFloating){
+      parenthesize=true
+      for(let i=0; i<g.floating.length; i++){
+        let float = g.floating[i]
+        if(float!==undefined){
+          result += printTerm(float)
+        }
+      }
+    }
+  }
+  else{
+    if(!g.text){
+      if (g.owner===svg){
+        throw "top level boxes expected to have text"
+      }
+      let lamIndex = g.owner.lamIndex
+      if(lamIndex===undefined){
+        throw "Either printTerm was called on a non-top-level box or something has gone wrong"
+      }
+      result = makeVarname(lamIndex,g.ownerIndex) + " "
+    }
+    else{
+      result = g.text + " "
+    }
+    let atArg = 0
+    if(isInfix(g.text)){
+      while(atArg<g.floating.length && atArg<2){
+        let arg = g.floating[atArg++]
+        if(atArg==1) result = printTerm(arg)+" "+result
+        else result+=printTerm(arg)
+      }
+      result="("+result+")"
+    }
+    if(g.floating.length>atArg){
+      parenthesize=true
+      while(atArg<g.floating.length ){
+        result+=printTerm(g.floating[atArg++])
+      }
+    }
+  }
+  if(parenthesize){
+    result=`(${result})`
+  }
+  return result
 }
 
   </script>
@@ -406,6 +452,9 @@ path{
 }
 g:hover>path{
   stroke-width:1;
+}
+#hsTerm{
+  position: absolute;
 }
 /*Awaiting feature support
 g{
@@ -435,6 +484,7 @@ g{
          The only reason I don't just use the svg is that that doesn't support .getCTM()-->
   </g>
 </svg>
+<pre id="hsTerm"> </pre>
 <script src="Events.js"> </script>
 
 <script type="text/javascript">
@@ -449,7 +499,7 @@ function getLength(txt){//TODO: sanitize
   testtext.innerHTML=txt
   return testtext.getComputedTextLength()
 }
-svg.args=[]
+svg.floating=[]
 svg.filled=true //Not true, but we don't want anything to think it's the global argument
 svg.isHole=true
 
@@ -461,7 +511,12 @@ function quick(n,ty){
 }
 
 GAME="Action->Event->GameState->GameState"
+GEGSTO="Action->Event->GameState->"
 RULE=`(${GAME})->${GAME}`
+
+//quick("when",`${GEGSTO}Bool->${RULE}->${RULE}`)
+
+
 quick("map","(Int->Int)->ListInt->ListInt")
 quick("+","Int->Int->Int")
 quick("negate","Int->Int")
