@@ -1,0 +1,364 @@
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title> Mobius demonstration  </title>
+
+<style type="text/css">
+body{
+max-width:800px;
+align:center;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+<script type="x-shader/x-vertex" id="vertex">#version 300 es
+in vec4 pos;
+in vec2 boardPos;
+out vec2 boardPos2;
+uniform mat4 uTransform;
+const mat4 perspective=mat4(1.,0.,0.,0.,0.,1.,0.,0.,0.,0.,1.,1.,0.,0.,-2.,0.);
+
+void main() {
+  boardPos2=boardPos;
+  vec4 xyzw = uTransform*pos;
+  //vec4
+
+  //vec4 v = vec4((pos.xy)*0.7+pos.zw*0.07- vec2(0.0,1.1),0.1,1.0);
+  vec4 v = perspective*vec4(xyzw.xy,xyzw.z+3.,1.);
+  gl_Position = v;//vec4(v.xyz,v.w);
+  //gl_PointSize = 30./(.5+abs(xyzw.w));
+}
+</script>
+<script type="x-shader/x-fragment" id="fragment">#version 300 es
+precision mediump float;
+uniform sampler2D uSampler;
+in vec2 boardPos2;
+out vec4 color;
+void main() {
+  //highp vec2 v = gl_PointCoord; //gl_FragCoord;
+  //float rem = mod(piece2,6.0);
+  //vec4 c = texture(uSampler,(v+vec2(rem,(piece2-rem)/6.0))/vec2(6.0,4.0));
+  //if (c.a<0.1) discard;
+  //color = c;
+  vec4 c = texture(uSampler,boardPos2.yx);
+  color = c;// vec4(0.0,0.0,0.0,1.0); //vec4(v.x, v.y,0.0, 1.0);
+}
+</script>
+
+</head>
+<body>
+<p>
+The Chess variant <a href="http://3manchess.com/">3 Man Chess</a> is played on a
+ mobius strip.
+Specifically, rooks, bishops and queens move as though they were on a mobius
+ strip with 24 spaces along the edge and 13 spaces across, except they are not
+ allowed to land on the central ring of 12.
+This demonstrates how to see the starting layout as though it was a mobius strip.
+</p>
+
+<p>WASD to rotate</p>
+<input type="button" onclick="run()" value="Run" style="position:relative;top:-5px"></input>
+<input id="folding" type="range" value="1" min="0" max="1" step="0.01" oninput="changeFolding()">
+
+<canvas id="cnv" height=800 width=800>
+</canvas>
+
+<img src="pieces.png" id="img" onload="ready()" style="display:none"/>
+<canvas id="board" height=1300 width=2400  style="display:none">
+</canvas>
+
+<script>
+let runningDown = undefined;
+function changeFolding(){
+  runningDown=undefined
+  rebuildData()
+}
+function run(){
+  initial = -(-(folding.value))
+  runningDown=(folding.value>0.5)
+  const millisperUnit = 4000
+  let runStart=undefined
+  let step=(t)=>{
+    if (runStart === undefined){
+      runStart=t
+    }
+    if(runningDown !== undefined){
+      let fraction = (t-runStart)/millisperUnit
+      v = initial + fraction*(1-2*runningDown)
+      if (v<0){
+        v=0
+        runningDown=undefined
+      }
+      if (v>1){
+        v=1
+        runningDown=undefined
+      }
+      folding.value=v
+      rebuildData()
+      requestAnimationFrame(step)
+    }
+  }
+  requestAnimationFrame(step)
+}
+
+//style="display:none"
+// return a pair of points so that the set of lines between
+//   mobiuspair(θ)[0] and mobiuspair(θ)[1] for θ in [0,2π)
+//   form an embedding of a mobius strip in R^3
+function mobiuspair(θ){
+  with(Math){
+    return [[sin(θ)*(2+cos(θ/2)),cos(θ)*(2+cos(θ/2)),sin(θ/2)],
+            [sin(θ)*(2-cos(θ/2)),cos(θ)*(2-cos(θ/2)),-sin(θ/2)]];
+  }
+}
+const FRAC = 1/13
+function mobiusedgepair(θ){ // θ in [0,4π)
+  with(Math){
+    return [[sin(θ)*(2+cos(θ/2)),cos(θ)*(2+cos(θ/2)),sin(θ/2)],
+            [sin(θ)*(2+cos(θ/2)*FRAC),cos(θ)*(2+cos(θ/2)*FRAC),sin(θ/2)*FRAC]];
+  }
+}
+function diff3(p1,p2){// p2-p1 (vector from p2 to p2)
+  return [p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]];
+}
+function madd(p1,k,p2){//
+  return [p2[0]*k+p1[0],p2[1]*k+p1[1],p2[2]*k+p1[2]];
+}
+function len(v){
+  return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+}
+function norm(v){
+  let len = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+  if(len==0) return [0,0,0]
+  return [v[0]/len,v[1]/len,v[2]/len]
+
+}
+let switching=0.6
+function anulus(θ2){ // This could be done more carfully with differentiation,
+  // but I don't think the result would be clearer
+  with(Math){
+    let θ1 = switching*4*PI
+    let center1 = [sin(θ1)*2,cos(θ1)*2,0]
+    let [p1,p2] = mobiusedgepair(θ1)
+    let [q1,q2] = mobiusedgepair(θ1+(4*Math.PI/RESOLUTION))
+    let vcirc1 = norm(diff3(p1,q1))
+    let vradius1 = diff3(center1,p1)
+    const FRAC2 = 1/3
+    let center = madd(p1,(FRAC-1)/(1-FRAC2),vradius1)
+    let vradius = diff3(center,p1)
+    let vcirc = madd([0,0,0],len(vradius),vcirc1)
+    return [madd(madd(center,cos(θ2),vradius),sin(θ2),vcirc),
+        madd(madd(center,cos(θ2)*FRAC2,vradius),sin(θ2)*FRAC2,vcirc)]
+  }
+}
+let strip = []
+let isReady=false
+const RESOLUTION = 100
+function rebuildData(){
+  switching=folding.value
+  strip = []
+  for(i=0;i<=RESOLUTION;i++){
+    let per1 = i/RESOLUTION
+    if(per1<switching){
+      let [p1,p2] = mobiusedgepair(4*Math.PI*per1);
+      strip.push(p1,[1,per1],p2,[1-0.5*(1-FRAC),per1])
+    }
+    else{
+      let θ2 = 2*Math.PI*(per1-switching)
+      let [p1,p2] = anulus(θ2);
+      strip.push(p1,[1,per1],p2,[1-0.5*(1-FRAC),per1])
+    }
+  }
+  if(isReady){
+    setData(strip.flatMap(x=>x))
+    draw(mat.flatMap(x=>x))
+  }
+}
+rebuildData()
+
+function mkShader(gl,program,body,type){
+  shdr = gl.createShader(type)
+  gl.shaderSource(shdr, body)
+  gl.compileShader(shdr)
+  if (!gl.getShaderParameter(shdr, gl.COMPILE_STATUS)) {
+    console.log('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shdr));
+    gl.deleteShader(shader);
+    return null;
+  }
+  gl.attachShader(program,shdr)
+}
+
+
+let gl = cnv.getContext("webgl2")
+
+gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
+
+let buffer = undefined;
+function setup(data){
+  gl.enable(gl.DEPTH_TEST);
+  //gl.enable(gl.BLEND);
+  //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  program = gl.createProgram()
+  mkShader(gl,program,vertex.innerHTML,gl.VERTEX_SHADER)
+  mkShader(gl,program,fragment.innerHTML,gl.FRAGMENT_SHADER)
+  gl.linkProgram(program)
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    var linkErrLog = gl.getProgramInfoLog(program)
+    console.log(
+      "Shader program did not link successfully. "
+      + "Error log: " + linkErrLog)
+    }
+  //console.log("hi",gl.getUniformLocation(program, 'uSampler'))
+  buffer = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+
+  posLoc = gl.getAttribLocation(program, 'pos')
+  gl.enableVertexAttribArray(posLoc)
+  gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 20, 0)
+
+  pieceLoc = gl.getAttribLocation(program, 'boardPos')
+  gl.enableVertexAttribArray(pieceLoc)
+  gl.vertexAttribPointer(pieceLoc, 2, gl.FLOAT, false, 20, 12)
+  numPoints = data.length/5
+
+  gl.useProgram(program)
+  scale = 0.6
+  mat = [
+    [scale,0,0,0],
+    [0,scale,0,0],
+    [0,0,scale,0],
+    [0,0,0,scale],
+  ]
+  matLoc = gl.getUniformLocation(program,"uTransform")
+  //draw(mat.flatMap(x=>x))
+}
+function setData(data){
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+}
+
+function draw(matrix){
+  gl.clearColor(0.0, 0.3, 0.0, 1.0)
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+  gl.uniformMatrix4fv(matLoc,false,new Float32Array(matrix))
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,numPoints)
+}
+toAB  = {
+  "P":0,
+  "N":1,
+  "B":2,
+  "R":3,
+  "Q":4,
+  "K":5,
+  "W":12,
+  "U":13,
+  "D":14,
+  "S":15,
+  "Y":16,
+  "C":17,
+  "p":6+0,
+  "n":6+1,
+  "b":6+2,
+  "r":6+3,
+  "q":6+4,
+  "k":6+5,
+  "w":6+12,
+  "u":6+13,
+  "d":6+14,
+  "s":6+15,
+  "y":6+16,
+  "c":6+17,
+}
+function rotate(i,j,theta){
+  var c=Math.cos(theta)
+  var s=Math.sin(theta)
+  mat=mat.map(v=>v.map((x,k)=>k==i?c*x-s*v[j]:k==j?c*x+s*v[i]:x) )
+  draw(mat.flatMap(x=>x))
+}
+function ready(){
+  setupBoard()
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  var level = 0
+  var internalFormat=gl.RGBA
+  var srcFormat=gl.RGBA
+  var srcType=gl.UNSIGNED_BYTE
+  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, board);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  isReady=true
+  setup(strip.flatMap(x=>x))
+  setData(strip.flatMap(x=>x))
+  draw(mat.flatMap(x=>x))
+  run()
+}
+
+function keyPress(e){
+  switch (e.key) {
+    case "a":
+      rotate(0,2,0.1)
+      break;
+    case "d":
+      rotate(0,2,-0.1)
+      break;
+    case "w":
+      rotate(1,2,0.1)
+      break;
+    case "s":
+      rotate(1,2,-0.1)
+      break;
+
+    /*
+    case "q":
+      rotate(3,2,0.1)
+      break;
+    case "e":
+      rotate(3,2,-0.1)
+      break;*/
+  }
+}
+
+document.addEventListener("keypress",keyPress)
+
+function setupBoard(){
+  let ctx=board.getContext("2d")
+  for (let i=0;i<=board.width;i+=100){
+    for (let j=0;j<=board.height;j+=100){
+      if(j+50==board.height/2){
+        ctx.fillStyle=((i+j)%200==0)?"#234":"#567"
+      }
+      else {ctx.fillStyle=((i+j)%200==0)?"#432":"#765"}
+      ctx.fillRect(i,j,100,100)
+    }
+  }
+  const W = img.width/6
+  const H = img.height/4
+  function drawAt(px,py,x,y){
+    x+=12 // This just makes the graphics a bit easier
+    x=x%24
+    ctx.drawImage(img,px*W,py*H,W,H,x*100,y*100,100,100);
+    ctx.drawImage(img,px*W,py*H,W,H,((x+12)%24)*100,(12-y)*100,100,100);
+  }
+  let x=0
+  for (let col of ["w","g","b"]){
+    ctx.filter=(col=="g"?"contrast(0.2)":"none")
+    for (let i=0;i<8;i++){
+      let pieceX = "31245213"[i]
+      let pieceY = col=="b"
+      drawAt(pieceX,pieceY,x,0)
+      drawAt(0,pieceY,x,1)
+      //let [dx,dy] = toCanvasCoords(x,0)
+      //ctx.drawImage(img,sx,sy,W,H,dx,dy,100,100);
+      //[dx,dy] = toCanvasCoords(x,1)
+      //ctx.drawImage(img,0,sy,W,H,dx,dy,100,100)
+      x+=1
+    }
+  }
+}
+
+</script>
+</body>
+</html>
