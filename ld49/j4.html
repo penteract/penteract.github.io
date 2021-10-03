@@ -1,0 +1,223 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>4D Jenga</title>
+<script src="quickhull.js" charset="utf-8"></script>
+<script src="jenga.js" charset="utf-8"></script>
+<script type="x-shader/x-vertex" id="vertex">#version 300 es
+in vec3 pos;
+in float indx;
+//in vec2 boardPos;
+out float indx2;
+uniform mat4 uTransform;
+const mat4 perspective=mat4(2.,0.,0.,0.,0.,2.,0.,0.,0.,0.,1.,1.,0.,0.,-2.,0.);
+
+void main() {
+  //boardPos2=boardPos;
+  vec4 xyzw = uTransform*vec4(pos,1.0);
+  //vec4
+
+  //vec4 v = vec4((pos.xy)*0.7+pos.zw*0.07- vec2(0.0,1.1),0.1,1.0);
+  //vec4 v = perspective*vec4(xyzw.xy,xyzw.z+3.,1.);
+  indx2=indx;
+  vec4 v = perspective*vec4(xyzw.xy,xyzw.z+3.,1.);
+  gl_Position = v;//vec4(v.xyz,v.w);
+  //gl_PointSize = 30./(.5+abs(xyzw.w));
+}
+</script>
+<script type="x-shader/x-fragment" id="fragment">#version 300 es
+precision mediump float;
+//uniform sampler2D uSampler;
+in float indx2;
+out vec4 color;
+void main() {
+  //highp vec2 v = gl_PointCoord; //gl_FragCoord;
+  //float rem = mod(piece2,6.0);
+  //vec4 c = texture(uSampler,(v+vec2(rem,(piece2-rem)/6.0))/vec2(6.0,4.0));
+  //if (c.a<0.1) discard;
+  //color = c;
+  //vec4 c = texture(uSampler,boardPos2.yx);
+  color = vec4(vec3(0.7,0.6,0.5)+vec3(indx2/20.),1.0); //vec4(v.x, v.y,0.0, 1.0);
+}
+</script>
+
+<script type="x-shader/x-vertex" id="vertexTower">#version 300 es
+in vec4 pos;
+in float indx;
+//in vec2 boardPos;
+out float indx2;
+uniform mat4 tilt;
+uniform mat4 uTransform;
+const mat4 perspective=mat4(2.,0.,0.,0.,0.,2.,0.,0.,0.,0.,1.,1.,0.,0.,-2.,0.);
+const mat4 projection=mat4(1.,0.,0.,0., 0.,0.,-1.,0., 0.,0.,0.,0., 0.,1.,0.,0.); // project from 4d 3d space with what was y becoming -z and what was w becoming y, leaving x as is, discarding old z
+
+void main() {
+  vec4 xyzw = vec4(pos.xyz/2.,pos.w/15.-1.);
+  vec4 v = projection*uTransform*xyzw;
+  if(indx>5.){
+    v=projection*xyzw;
+  }
+  v.w=1.;
+  indx2=indx;
+  gl_Position = v;
+}
+</script>
+<script type="x-shader/x-fragment" id="fragmentTower">#version 300 es
+precision mediump float;
+in float indx2;
+out vec4 color;
+void main() {
+  if(indx2<5.){
+    color = vec4(vec3(0.7,0.6,0.5)+vec3(indx2/20.),1.0);
+  }else{
+    color = vec4(0.8,0.8,1.0,1.);
+  }
+}
+</script>
+</head>
+
+<body>
+  On the left, you see a horizontal cross section of layer <span id="layerNum">0</span> of the tower.<br />
+  On the right or below, you see a projection of the tower down to 2d space, with the angle of view changing as you rotate the view of the cross section <br />
+
+  WASD to rotate the view, up/down arrow keys to change layer being viewed<br />
+  Click on a piece in the left hand view to remove it.<br />
+
+<canvas id="layerCanvas" width="300" height="300"></canvas>
+<canvas id="towerCanvas" width="300" height="900" style="float:right;"></canvas>
+</body>
+<script src="gl.js" charset="utf-8"></script>
+<script type="text/javascript">
+//cuboidToTriangles(stack[0][0]).flatMap(x=>x.concat)
+
+function trianglePoints(e,l){
+  //console.log(e)
+  return [
+    e[0].concat([mf(l)]),e[0].concat([mf(l+1)]), e[1].concat([mf(l)]),
+    e[1].concat([mf(l+1)]),e[0].concat([mf(l+1)]), e[1].concat([mf(l)])
+  ]
+}
+function mf(x){
+  return x//(x/15)-1
+}
+function mkTowerData(){
+  res=[]
+  for (let l=0;l<stacksize;l++){
+    for (let k of stack[l].pieces.flatMap((p,i) => p?cuboidToEdges(p).flatMap(e=>trianglePoints(e,l).flatMap(tri=>tri.concat([i]))) :[])){
+      res.push(k)
+    }
+  }
+  res.push(
+  -10,0,0,mf(currentLayer) ,6,
+  10,0,0,mf(currentLayer+0.5) ,6,
+  -10,0,0,mf(currentLayer+1) ,6,
+  )
+  return res
+}
+function mkData(){
+  return stack[currentLayer].pieces.flatMap((x,i)=> x?cuboidToTriangles(x).flatMap(y=>y.concat([i])):[] )
+}
+function changeLayer(l){
+  currentLayer=l
+  if(currentLayer<1)currentLayer=1;
+  if(currentLayer>stacksize-3) currentLayer=stacksize-3
+  layerNum.innerHTML=currentLayer
+  setData(gl1,mkData())
+  setData(gl2,mkTowerData())
+}
+
+currentLayer = 1
+let gl1 = setup(layerCanvas, vertex.innerHTML, fragment.innerHTML, 3, mkData())
+const testData = [
+  -1,0,0,9,0,
+  1,1,1,1,1,
+  1,0,-1,-1,10
+]
+let gl2 = setup(towerCanvas, vertexTower.innerHTML, fragmentTower.innerHTML,4, mkTowerData())
+
+function prt(d){// for debugging
+  for(i=0;i<d.length;i+=5){
+    console.log(d.slice(i,i+5)+"")
+  }
+}
+function removeBlock(i){//remove the block at index i in the current layer
+  console.log("removing", currentLayer,i)
+  stack[currentLayer].pieces[i]=undefined
+  setData(gl1,mkData())
+  setData(gl2,mkTowerData())
+  let fall = findfalls()
+  if(fall!==undefined) {
+    gameover=true
+    let reason=fall[0]
+    if (reason=="empty"){
+      alert("You removed the last block from layer "+fall[1]+". The tower collapses")
+    }
+    else{
+      doFall(fall[1],fall[2],fall[3])
+    }
+    console.log("fall",fall)
+  }
+}
+gameover=false
+function doFall(l,f,prp){
+  stopL=l
+  let [p,q,r]=f
+  perp3 = prp
+  dface = dot(perp3, p)
+  startfall=new Date()
+  setTimeout(fallstep,60)
+}
+function fallstep(){
+  theta = ((new Date) - startfall)/10000
+  sint = Math.sin(theta)
+  cost = Math.cos(theta)
+  setData(gl2, falling())
+  if(theta<Math.PI/4){
+    setTimeout(fallstep,60)
+  }
+}
+function rott(pt){
+  //console.log(e)
+  let [x,y,z,w] = pt
+  let dpt = dot(pt,perp3)
+  let unch = diff(pt,mul(perp3, dpt-dface)) // the bit that shouldn't change as we rotate
+  return addd(mul(perp3,dpt*cost+(w-(stopL+1))*sint),unch).concat([(stopL+1)+(w-(stopL+1))*cost - dpt*sint])
+
+}
+function falling(){
+  res=[]
+  for (let l=0;l<stacksize;l++){
+    if(l<=stopL){
+      for (let k of stack[l].pieces.flatMap((p,i) => p?cuboidToEdges(p).flatMap(e=>trianglePoints(e,l).flatMap(tri=>tri.concat([i]))) :[])){
+        res.push(k)
+      }
+    }else{
+      for (let k of stack[l].pieces.flatMap((p,i) => p?cuboidToEdges(p).flatMap(e=>trianglePoints(e,l).flatMap(tri=>rott(tri).concat([i]))) :[])){
+        res.push(k)
+      }
+    }
+  }
+  res.push(
+  -10,0,0,currentLayer ,6,
+  10,0,0,currentLayer+0.5 ,6,
+  -10,0,0,currentLayer+1 ,6,
+  )
+  return res
+}
+
+
+function rotate(gl,i,j,theta){
+  var c=Math.cos(theta)
+  var s=Math.sin(theta)
+  gl.mat=gl.mat.map(v=>v.map((x,k)=>k==i?c*x-s*v[j]:k==j?c*x+s*v[i]:x) )
+  setMatrix(gl,gl.mat.flatMap(x=>x))
+  setMatrix(gl2,gl.mat.flatMap(x=>x))
+}
+rotate(gl1,0,1,0.5)
+rotate(gl1,0,2,1.0)
+
+
+</script>
+<script src="input.js" charset="utf-8"></script>
+
+</html>
