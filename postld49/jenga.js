@@ -6,6 +6,9 @@
 //  (containing pieces numbered 0, 1, 2 and 3)
 // uniform density of 2(units mass per cubic unit)
 
+const STARTINGLAYERS = 20
+const MAXTILT = 0.02 // Maximum tilt in radians. Assume that it falls over if tilting this much in the wrong direction would cause it to fall over
+
 const initial = [
   [[1,1,1],[-1,1,1]],
   [[1,-1,1],[-1,-1,1]],
@@ -47,18 +50,18 @@ function cuboidToEdges(c){
   return res
 }
 const cubeTris=[
-  0,1,3,
-  1,3,5,
-  3,5,7,
-  5,7,6,
-  7,6,3,
-  6,3,2,
-  3,2,0,
-  2,0,6,
-  0,6,4,
-  6,4,5,
-  4,5,0,
-  5,0,1
+  [0,1,3],
+  [1,3,5],
+  [3,5,7],
+  [5,7,6],
+  [7,6,3],
+  [6,3,2],
+  [3,2,0],
+  [2,0,6],
+  [0,6,4],
+  [6,4,5],
+  [4,5,0],
+  [5,0,1]
 ]
 function cuboidToTriangles(c){
   let corners = []
@@ -66,25 +69,45 @@ function cuboidToTriangles(c){
     corners.push(c[0].map((x,v)=>(i&(1<<v))?(c[1][v]==x?0:-x):x))
   }
   let res=[]
-  for (let i of cubeTris){
-    res.push(corners[i])
+  for (let tri of cubeTris){
+    res.push(tri.map(i=>corners[i]))
   }
   return res
 }
 
-stack = []
-const stacksize = 20
-for(let i=0;i<stacksize;i++){
-  let l=i%6
+function addLayer(dontCompute){
+  let l=stacksize%6
   let layer = {
     pieces:mkLayer(l%3, l>>1),
     mass:16,
     com:[0,0,0],//multiplied py mass
-    massAbove :16*(stacksize-i-1),
+    massAbove :0,
     comAbove:[0,0,0,0]
   }
   stack.push(layer)
+  stacksize+=1
+  if(!dontCompute){
+    computeCoMs()
+  }
 }
+
+let stack
+let stacksize
+let removed
+
+function resetStack(height){
+  if(height===undefined){
+    height = STARTINGLAYERS
+  }
+  stack = []
+  stacksize = 0
+  removed = 0
+  for(let i=0;i<height;i++){
+    addLayer(true)
+  }
+  computeCoMs()
+}
+resetStack()
 
 function computeCoMs(){
   for(let l = stacksize-1; l>=0; l--){
@@ -108,14 +131,7 @@ function computeCoMs(){
     }
   }
 }
-function cross(p,q){
-  // cross product of 2 points in 3d space
-  return [
-    p[1]*q[2]-p[2]*q[1],
-    p[2]*q[0]-p[0]*q[2],
-    p[0]*q[1]-p[1]*q[0]
-  ]
-}
+
 function getouter(cubes){// returns a set of points, the convex hull of which is that of the cubes
   s={}
   for (let cube of cubes){
@@ -169,17 +185,18 @@ function findfalls(){
       let dotface = dot(p,prp)
       let dotA = dot(comAbove,prp)
       if((dot(com,prp)<dotface) !=  (dotA<dotface)){// if comAbove is outside the convex hull of the boundary
+        if (dot(com,prp)>dotface){
+          [p,q,r]=[p,r,q]// Give the triangle a consistent orientation
+        }
         return ["outside", l,[p,q,r]]
       }
       let comw = layer.comAbove[3]/layer.massAbove
       let tipneeded = Math.abs(dotA-dotface)
-      //console.log(l,tipneeded,comw-(l+1))
-      const sintip=0.05 // sin of maximum tilt ( ~= maximum tilt in radians)
-      if(Math.abs(dotA-dotface)<=(comw-(l+1))*sintip){
+      if(Math.abs(dotA-dotface)<=(comw-(l+1))*MAXTILT){
         if (dot(com,prp)>dotface){
-          prp=mul(prp,-1)
+          [p,q,r]=[p,r,q]// Give the triangle a consistent orientation
         }
-        return ["near", l, [p,q,r],prp, [Math.abs(dotA-dotface),(comw-(l+1))*sintip]+"" ]
+        return ["near", l, [p,q,r], [Math.abs(dotA-dotface),(comw-(l+1))*MAXTILT]+"" ]
       }
     }
   }

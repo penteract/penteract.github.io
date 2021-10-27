@@ -1,25 +1,3 @@
-
-function dot(p,q){
-  return (p[0]*q[0]+p[1]*q[1]+p[2]*q[2])
-}
-function mul(v,k){
-  return [v[0]*k, v[1]*k, v[2]*k]
-  //return v.map(x=>(x*k));
-}
-function diff(p,q){
-  return [p[0]-q[0],p[1]-q[1],p[2]-q[2]]
-}
-function addd(p,q){
-  return [p[0]+q[0],p[1]+q[1],p[2]+q[2]]
-}
-function perp(p,q,r){// vector perpendicular to a triangle
-  return cross(diff(q,p),diff(r,p))
-}
-function norm(v){
-  let k = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
-  if (k<epsilon) console.log("division by zero",v)
-  return mul(v,1/k)
-}
 // Returns a list of faces (where each face is a list of 3 indices into pts describing a triangle
 // assumes the first 3 elements of pts are not colinear.
 function quickHull(pts){

@@ -1,0 +1,299 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>4D Jenga</title>
+<script src="geometryUtils.js"> </script>
+<script src="quickhull.js"></script>
+<script src="jenga.js"></script>
+<script type="x-shader/x-vertex" id="vertex">#version 300 es
+in vec3 pos;
+in vec3 norml;
+in float indx;
+out float indx2;
+out vec3 normal2;
+out vec3 pos2;
+uniform mat4 uTransform;
+const mat4 perspective=mat4(2.,0.,0.,0.,0.,2.,0.,0.,0.,0.,1.,1.,0.,0.,-2.,0.);
+
+void main() {
+  pos2 = (uTransform*vec4(pos,1.0)).xyz;
+  normal2 = (uTransform*vec4(norml,0.0)).xyz;
+  indx2=indx;
+  vec4 v = perspective*vec4(pos2.xy,pos2.z+3.,1.);
+  gl_Position = v;
+}
+</script>
+<script type="x-shader/x-fragment" id="fragment">#version 300 es
+precision mediump float;
+in float indx2;
+in vec3 normal2;
+in vec3 pos2;
+out vec4 color;
+const vec3 lightp=vec3(0.,0.1,-3.);
+const float mag = sqrt(dot(lightp,lightp));
+void main() {
+  float ambient = 0.6;
+  vec3 tolight = lightp-pos2;
+  float diffuse = mag*abs(dot(tolight, normal2)/dot(tolight,tolight));
+  color = vec4((ambient+diffuse)*(vec3(0.7,0.6,0.5)+vec3(indx2/20.)),1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="hiddenfragment">#version 300 es
+precision mediump float;
+in float indx2;
+in vec3 normal2;
+in vec3 pos2;
+out vec4 color;
+void main() {
+  color = vec4(vec3(0.7,0.6,0.5)+vec3(indx2/20.),1.0);
+}
+</script>
+
+<script type="x-shader/x-vertex" id="vertexTower">#version 300 es
+in vec4 pos;
+in vec4 norml;
+in float indx;
+out float indx2;
+out vec4 normal2;
+uniform mat4 uTransform;
+
+// project from 4d 3d space with what was y becoming -z and what was w becoming y, leaving x as is, discarding old z
+const mat4 projection=mat4(1.,0.,0.,0., 0.,0.,-1.,0., 0.,0.,0.,0., 0.,1.,0.,0.);
+
+void main() {
+  normal2 = norml;
+  vec4 xyzw = vec4(pos.xyz/2.,pos.w/15.-1.);
+  vec4 v = projection*uTransform*xyzw;
+  if(indx>5.){
+    v=projection*xyzw;
+  }
+  v.w=1.;
+  indx2=indx;
+  gl_Position = v;
+}
+</script>
+<script type="x-shader/x-fragment" id="fragmentTower">#version 300 es
+precision mediump float;
+in float indx2;
+in vec4 normal2;
+out vec4 color;
+void main() {
+  if(indx2<5.){
+    color = vec4(vec3(0.7,0.6,0.5)+vec3(indx2/20.),1.0);
+  }else{
+    color = vec4(0.8+normal2.x*0.1,0.8,1.0,1.);
+  }
+}
+</script>
+</head>
+
+<body>
+<div id="explanation">
+  On the left, you see a horizontal cross section of layer <span id="layerNum">1</span> of the tower.<br />
+  On the right or below, you see a projection of the tower down to 2d space, with the angle of view changing as you rotate the view of the cross section <br />
+
+  WASD to rotate the view, up/down arrow keys to change layer being viewed<br />
+  Click on a piece in the left hand view to remove it.<br />
+  <span style="color:red" id="alertSpan"></span><br />
+</div>
+
+
+<div style="max-width:300px; float:left">
+  <canvas id="layerCanvas" width="300" height="300"></canvas>
+  <canvas id="hiddenCanvas" width="300" height="300" style="display:none"></canvas>
+  <br>
+  <div id="multiplayer">
+    <input id="tagInput" type="text" maxlength="4" size="5" value="test">
+    <input type="button" value="join game" onclick="connect(tagInput.value)">
+    <br>
+    <span id="inGame" style="display:none">
+      Joined game "<span id="gameTag"></span>"
+      <br>
+      <span id="isTurn"></span>
+      <!--<br />
+      <label for="numPlayers">number of Players </label>
+      <input id="numPlayers" type="number" size="4" value="0">-->
+    </span>
+  </div>
+  <br>
+  Blocks removed:
+  <div id="removedList">
+  </div>
+</div>
+<canvas id="towerCanvas" width="300" height="700"></canvas>
+</body>
+<script src="gl.js" charset="utf-8"></script>
+<script type="text/javascript">
+
+
+// User interaction functions:
+// ---------------------------
+function removeBlock(i,layer){//remove the block at index i in the current layer
+  if(layer===undefined)layer=currentLayer
+  console.log("removing", layer,i)
+  removedList.innerHTML+="Layer "+layer+", block "+i+"<br />"
+  stack[layer].pieces[i]=undefined
+  removed+=1
+  setAllData()
+  if(!checkFalls() && removed%4==0){
+    addLayer()
+    setAllData()
+    checkFalls()
+  }
+}
+function changeLayer(l){
+  currentLayer=l
+  if(currentLayer<1)currentLayer=1;
+  if(currentLayer>stacksize-3) currentLayer=stacksize-3
+  layerNum.innerHTML=currentLayer
+  let d1=mkData()
+  setAllData()
+  setData(gl2,mkTowerData())
+}
+function rotate(gl,i,j,theta){
+  var c=Math.cos(theta)
+  var s=Math.sin(theta)
+  gl.mat=gl.mat.map(v=>v.map((x,k)=>k==i?c*x-s*v[j]:k==j?c*x+s*v[i]:x) )
+  setMatrix(gl,gl.mat.flatMap(x=>x))
+  setMatrix(gl2,gl.mat.flatMap(x=>x))
+}
+
+// GPU data Construction
+// ---------------------
+function setAllData(){
+  let dat = mkData();
+  setData(gl1,dat)
+  setData(glhid,dat)
+  if(!gameover)setData(gl2,mkTowerData())
+}
+function resetAllData(){
+  let dat = mkData();
+  resetData(gl1,dat)
+  resetData(glhid,dat)
+  resetData(gl2,mkTowerData())
+}
+function mkData(){ // construct triangles for the current layer
+  return stack[currentLayer].pieces.flatMap((x,i)=>
+         x?cuboidToTriangles(x).flatMap(function(t){
+           let nrm = norm(perp(...t))
+           return t.flatMap(p => p.concat([i]).concat(nrm))
+         }):[])
+}
+function mkTowerData(){
+  // make a rectangle (pair of triangles) for each edge of the cuboids in the
+  // tower, extruded through the fourth dimension
+  res=[]
+  for (let l=0;l<stacksize;l++){
+    for (let k of stack[l].pieces.flatMap((p,i) =>
+        p?cuboidToEdges(p).flatMap(e=>
+          trianglePoints(e,l).flatMap(p=>
+          p.concat([i])))
+        : [])){
+      res.push(k)
+    }
+  }
+  // Add something to indicate the current layer
+  if(tiltL>=currentLayer){
+    res.push(
+    -10,0,0,currentLayer ,6,
+    10,0,0,currentLayer+0.5 ,6,
+    -10,0,0,currentLayer+1 ,6,
+    )
+  }
+  //console.log("towerDataLength",res.length)
+  return res
+}
+function trianglePoints(e,l){
+  let v=[
+    e[0].concat([l]),e[0].concat([l+1]), e[1].concat([l]),
+    e[1].concat([l+1]),e[0].concat([l+1]), e[1].concat([l])
+  ]
+  if(l>tiltL){//if the game has ended and
+    return v.map(rott)
+  }
+  else return v
+}
+
+// Falling
+// ----------
+function checkFalls(){
+  let fall = findfalls()
+  if(fall!==undefined) {
+    gameover=true
+    alertSpan.innerHTML+='The tower has collapsed <input type="button" onclick="reset()" value="reset">'+(connected?"(to disconnect from a multiplayer game, refresh the page)":"")
+    let reason=fall[0]
+    if (reason=="empty"){
+      alert("You removed the last block from layer "+fall[1]+". The tower collapses")
+    }
+    else{
+      doFall(fall[1],fall[2])
+    }
+    console.log("fall",fall)
+    return true
+  }
+  return false
+}
+function doFall(l,f){
+  tiltL=l //boundary (number of the layer above which is the boundary on which it tilts
+  tiltFace=f.map(x=>x.concat([tiltL+1]))
+  requestAnimationFrame( function(ts){
+    startfall=ts
+    requestAnimationFrame(fallstep)
+  })
+}
+function fallstep(ts){
+  theta = timeToAngle((ts - startfall))
+  setData(gl2, mkTowerData())
+  if(theta<Math.PI/4){
+    requestAnimationFrame(fallstep)
+  }
+}
+function rott(pt){
+  return rotateAboutPlane(tiltFace,theta,pt)
+}
+function timeToAngle(t){
+  // t/1000 is the simlpest thing that works here
+  return Math.pow(t/100/(10+stacksize-tiltL),2) // Cubic might well be a more physically accurate approximation, but gets a bit harder to see
+}
+
+// Initialization
+// ----------
+let tiltL = 10000 // The tower should never reach this height.
+// when the game is over, tiltL gets set to the number of the layer below the surfaceat which the tower breaks
+let gameover=false
+let currentLayer = 1
+let gl1 = setup(layerCanvas, vertex.innerHTML, fragment.innerHTML, 3, mkData(),true)
+let glhid = setup(hiddenCanvas, vertex.innerHTML, hiddenfragment.innerHTML, 3, mkData(),true)
+let gl2 = setup(towerCanvas, vertexTower.innerHTML, fragmentTower.innerHTML,4, mkTowerData(), false)
+
+rotate(gl1,0,1,0.5)
+rotate(gl1,0,2,1.0)
+
+function reset(){
+  resetStack()
+  resetUI(true)
+}
+
+function resetUI(setRotation){
+  tiltL = 10000
+  gameover = false
+  currentLayer = 1
+  if(setRotation){
+    resetAllData()
+    rotate(gl1,0,1,0.5)
+    rotate(gl1,0,2,1.0)
+  }
+  else{
+    setAllData()
+  }
+  alertSpan.innerHTML=""
+  removedList.innerHTML=""
+  layerNum.innerHTML=currentLayer
+}
+
+
+</script>
+<script src="input.js" charset="utf-8"></script>
+<script src="multiplayer.js" charset="utf-8"></script>
+
+</html>

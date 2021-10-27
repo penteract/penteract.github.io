@@ -9,12 +9,13 @@ function mkShader(gl,program,body,type){
   }
   gl.attachShader(program,shdr)
 }
+const init_scale = 0.5;
 
-function setup(canvas, vertexShader, fragmentShader,possize, data){
+function setup(canvas, vertexShader, fragmentShader,possize, data, normal){
   let gl = canvas.getContext("webgl2")
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)
   gl.enable(gl.DEPTH_TEST);
-  gl.possize=possize
+  gl.floatsPerPoint=normal?2*possize+1:possize+1
   //gl.enable(gl.BLEND);
   //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -35,20 +36,24 @@ function setup(canvas, vertexShader, fragmentShader,possize, data){
 
   let posLoc = gl.getAttribLocation(program, 'pos')
   gl.enableVertexAttribArray(posLoc)
-  gl.vertexAttribPointer(posLoc, possize, gl.FLOAT, false, 4*(1+possize), 0)
+  gl.vertexAttribPointer(posLoc, possize, gl.FLOAT, false, 4*(gl.floatsPerPoint), 0)
   let indxLoc = gl.getAttribLocation(program, 'indx')
   gl.enableVertexAttribArray(indxLoc)
-  gl.vertexAttribPointer(indxLoc, 1, gl.FLOAT, false, 4*(1+possize), 4*possize)
+  gl.vertexAttribPointer(indxLoc, 1, gl.FLOAT, false, 4*(gl.floatsPerPoint), 4*possize)
+  if(normal){
+  let normLoc = gl.getAttribLocation(program, 'norml')
+  gl.enableVertexAttribArray(normLoc)
+  gl.vertexAttribPointer(normLoc, possize, gl.FLOAT, false, 4*(gl.floatsPerPoint), 4*(possize+1))
+}
 
   //pieceLoc = gl.getAttribLocation(program, 'boardPos')
-  gl.numPoints = data.length/(gl.possize+1)
+  gl.numPoints = data.length/gl.floatsPerPoint
 
   gl.useProgram(program)
-  let scale = 0.5
   gl.mat = [
-    [scale,0,0,0],
-    [0,scale,0,0],
-    [0,0,scale,0],
+    [init_scale,0,0,0],
+    [0,init_scale,0,0],
+    [0,0,init_scale,0],
     [0,0,0,1],
   ]
   gl.matLoc = gl.getUniformLocation(program,"uTransform")
@@ -62,11 +67,21 @@ function setMatrix(gl,matrix){
   gl.drawArrays(gl.TRIANGLES,0,gl.numPoints)
 }
 function setData(gl,data){
-  gl.numPoints=data.length/(gl.possize+1)
+  gl.numPoints=data.length/gl.floatsPerPoint
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.buffer)
   //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.DYNAMIC_DRAW);
   gl.bufferSubData(gl.ARRAY_BUFFER,0, new Float32Array(data));
   gl.clearColor(1.0, 1.0, 1.0, 1.0)
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
   gl.drawArrays(gl.TRIANGLES,0,gl.numPoints)
+}
+function resetData(gl,data){
+  gl.mat = [
+    [init_scale,0,0,0],
+    [0,init_scale,0,0],
+    [0,0,init_scale,0],
+    [0,0,0,1],
+  ]
+  gl.uniformMatrix4fv(gl.matLoc,false,new Float32Array(gl.mat.flatMap(x=>x)))
+  setData(gl,data)
 }
