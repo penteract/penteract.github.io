@@ -1,0 +1,629 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta "">
+<title> The Area of the Pythagoras Tree </title>
+<style>
+text{
+  transform:scaleY(-1);
+}
+svg{
+  transform:scaleY(-1);
+  stroke-width:.03;
+  font-size:0.3;
+}
+/*path,line{
+  stroke:black;
+}*/
+</style>
+</head>
+<body style="max-width:600px; padding-left:10px;" >
+<script id=header>
+
+function draw(svg){
+  document.getElementById(document.currentScript.id+"svg").innerHTML=svg;
+}
+function download(svg){
+  // https://stackoverflow.com/questions/13405129/create-and-save-a-file-with-javascript
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([svg],{type:"text/svg"}));
+  a.download = document.currentScript.id+".svg"
+//  document.body.appendChild(a);
+  a.click()
+}
+
+</script>
+<h1>The Area of the Pythagoras Tree</h1>
+To spoil the surprise, the area of the Pythagoras Tree is the rational number
+<table style="text-align:center;"><tbody>
+<tr><td style="border-bottom:2px solid black;">12823413011547414368862997525616691741041579688920794331363953564934456759066858494476606822552437442098640979</td></tr>
+<tr><td>877512406035620068631903180662851572553488753575243048137500508983979170248733422547196905684808937723408093</td></tr>
+</tbody></table>
+(no, they don't have any common factors)
+
+<p>
+The <a href="https://en.wikipedia.org/wiki/Pythagoras_tree_(fractal)">Pythagoras Tree</a> is a fractal constructed by taking a unit square and then recursively constructing 2 copies of the Pythagoras tree each scaled by a factor of 1/√2 and rotated 45° so that the bases of the copies of the original square form a right-angled isosceles triangle with the top edge of the original square.
+</p>
+<svg id=somethingsvg viewBox="-3.4 -0.4 7.8 4.8">
+</svg>
+<script type="text/javascript" id="something">
+function drawScaled(l,r){
+  // Draw 2 things scaled and rotated according to the transformations needed by the Pythagoras Tree
+  return `<g transform="translate(0 1) rotate(45) scale(0.7071)">`+l+"</g>"+
+    `<g transform="translate(0.5 1.5) rotate(-45) scale(0.7071)">`+r+"</g>"
+}
+function drawMany(n,thing){
+  // Draw something many times in the shape of the Pythagoras tree
+  if (n>0){
+    let sub = drawMany(n-1,thing)
+    return thing+drawScaled(sub,sub)
+  }
+  return ""
+}
+function grid(n,sty){
+  n||=1
+  sty||="stroke:gray"
+  let res=`<g style=${sty} >`
+  for(c=-10;c<10;c++){
+    res+=`<line x1=${c/n} y1=-10 x2=${c/n} y2=10 />`
+    res+=`<line y1=${c/n} x1=-10 y2=${c/n} x2=10 />`
+  }
+  return res + "</g>"
+}
+draw(grid()+ drawMany(10,`<rect style="opacity:0.5;fill:blue" x=0 y=0 width=1 height=1 />`))
+</script>
+
+<h2>Some definitions</h2>
+<h3> The Pythagoras Tree</h3>
+<p>
+Let d<sub>0</sub> be the transformation which rotates 45 degrees anticlockwise and scales by 1/√2 centered on (-1,1)
+and let d<sub>1</sub> be the transformation which rotates 45 degrees clockwise and scales by 1/√2 centered on (2,1).
+</p>
+<p>
+Define the <b>depth 1 rendering</b> of the Pythagoras tree to consist of an open unit square with corners at (0,0) and (1,1), and the depth n+1 rendering to consist of 2 copies of the depth n rendering transformed by d<sub>0</sub> and d<sub>1</sub> together with the unit square of the depth 1 rendering. This gives the arrangement described in Sec. \ref{sec:intro}. The Pythagoras tree is the union of the set of finite depth renderings.
+</p>
+
+<p>
+Our goal is to find the exact area of the Pythagoras tree, which we will denote A. A is the limit of the sequence of the areas of the finite depth renderings.
+This sequence starts 1, 2, 3, 4, 5, 5 <sup>15</sup>/<sub>16</sub>, 6 <sup>53</sup>/<sub>64</sub>,... . The limit of this monotone sequence exists since it is bounded above by the area of a 7x4 rectangle which no part of the shape leaves.
+</p>
+<svg id=depthssvg viewBox="-3.4 0 7.8 4" style="transform:scaleY(-1)">
+</svg>
+<script type="text/javascript" id="depths">
+function translate(dx,dy,thing){
+  return `<g transform="translate(${dx} ${dy})">${thing}</g>`
+}
+pict = ""
+for(let i=1;i<=3;i++){
+  pict += translate(i*2.7-5.8,1,
+  drawMany(i,`<rect style="opacity:0.5;fill:blue" x=0 y=0 width=1 height=1 />`)+
+  `<text y=0.3 font-size=0.3>Depth ${i}</text>`)
+}
+draw(pict)
+</script>
+<h3>Automata</h3>
+<svg id=trianglesvg viewBox="-.015 -.015 2.03 2.03" style="transform:scaleY(-1);width:100px;float:left;margin:5px">
+<path d="M 0 0 L 2 0 L 0 2 Z" />
+<line style="stroke:lightgray" x1=1 y1=-10 x2=1 y2=10 />
+<line style="stroke:lightgray" y1=1 x1=-10 y2=1 x2=10 />
+<line style="stroke:gray" x1=0 y1=-10 x2=0 y2=10 />
+<line style="stroke:gray" y1=0 x1=-10 y2=0 x2=10 />
+<line style="stroke:gray" x1=2 y1=-10 x2=2 y2=10 />
+<line style="stroke:gray" y1=2 x1=-10 y2=2 x2=10 />
+</svg>
+<p> Certain subsets of a unit square can be represented by dividing the square into 4 corners and describing what each quarter looks like. For shapes in which parts are copies of the whole, this can be done using a finite state automaton with the alphabet consisting of 4 symbols: tl (top left), tr (top right), bl (bottom left) and br (bottom right). For example, the triangle shown to the left can be described by the automaton below. The top left and bottom right corners are smaller copies of the triangle, while the bottom left and top right corners are full and empty respectively. </p>
+<svg id=triangleautomatonsvg viewBox="-2.1 -0.4 4.2 1.7" style="transform:scaleY(-1)">
+</svg>
+<script id=triangleautomaton>
+nodes = {}
+edges = {}
+function node(name,x,y){
+  nodes[name]=[x,y]
+  edges[name]={"bl":[],"tl":[],"tr":[],"br":[]}
+}
+function edge(src,dst,lab){
+  edges[src][lab].push(dst)
+  return drawEdge(src,dst,lab)
+}
+function drawEdge(src,dst,lab){
+  if(src==dst) return loop(src,[lab])
+  ;[x1,y1]=nodes[src];
+  ;[x2,y2]=nodes[dst];
+  mx=(x1+x2)/2
+  my=(y1+y2)/2
+  dx=x2-x1;
+  dy=y2-y1;
+  d=Math.sqrt(dx*dx+dy*dy)
+  x2-=.3*dx/d
+  y2-=.3*dy/d
+  return `<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} />` +
+    `<path d="M ${x2} ${y2} l ${(dy-dx)/d/5} ${(-dy-dx)/d/5} " />` +
+    `<path d="M ${x2} ${y2} l ${(-dy-dx)/d/5} ${(-dy+dx)/d/5} " />` +
+    `<text stroke=none x=${mx-0.1} y=${-my-0.05}  font-size=0.15>${lab}</text>`
+}
+function loop(node,labs){
+  [x,y]=nodes[node];
+  txt = ""
+  txt +=`<text stroke=none x=${x-0.3} y=${-y-.9} font-size=0.15>${labs}</text>`
+  return `<path d="M ${x} ${y} c -1 1 .5 1 0 .3 l .22 .1 l -.22 -.1 l -.04 .24" fill=none />` +txt
+}
+function drawNodes(){
+  //I'd like to use dominant-baseline="middle" for the text nodes,
+  // but that places the text inconsistently at different zoom levels
+  // (for me on Firefox on Linux, it was lower than it should be 
+  // at zoom levels below 200%, getting worse as the zoom level got lower)
+  // weirdly, this depended on zoom level, not the size of the svg
+  // (which could be kept constant by using a smaller browser window
+  return Object.keys(nodes).map(k=>  (([x,y]=nodes[k]),`<circle cx=${x} cy=${y} r=0.3 fill=white /> <text text-anchor="middle"
+ stroke=none  y=${-y+.1} x=${x}>${k}</text>`)).join("")
+}
+
+node("T",0,0)
+node("E",-1.5,0)
+node("F",1.5,0)
+pth = edge("T","E","tr")
+pth += edge("T","F","bl")
+pth += loop("T",["tl","br"])
+pth += loop("E",["bl","tl","tr","br"])
+pth += loop("F",["bl","tl","tr","br"])
+draw("<g stroke=black>"+ pth + drawNodes()+"</g>")
+</script>
+<p> This representation lets us calculate the area of the triangle. Call the area of the triangle A<sub>T</sub>. Since the area of the triangle is the sum of the areas of each of the 4 corners, we have that A<sub>T</sub> = A<sub>F</sub>/4 + 2A<sub>T</sub>/4 + A<sub>E</sub>/4 where A<sub>F</sub> is the area of a full square and A<sub>E</sub> is the area of an empty square. As A<sub>F</sub>=1 and A<sub>E</sub>=0, the equation becomes A<sub>T</sub> = 1/4 + A<sub>T</sub>/2. This lets us conclude that A<sub>T</sub> = 1/2 i.e. the area of the triangle is exactly half that of the unit square.</p>
+
+<h3> Nondeterministic Automata </h3>
+<p>Overlapping shapes can be described by non-deterministic automata where each node may have multiple (or zero) edges with a given label. In this case we don't need a separate state for empty squares - if a corner of a node is empty, it may simply have no outgoing edges with that label.</p>
+
+<p> For our purposes, any given non-deterministic automaton may be converted to a deterministic automaton by having a node in the new one for every set of nodes in the old one. The node corresponding to the set S should have an edge labeled l to set of all nodes in the old automaton with edges labeled l from some element of S, and all sets containing the full node F may be collapsed into one, with edges to itself.</p>
+
+<h2>Describing the Pythagoras tree using an automaton</h2>
+
+One way to look at the Pythagoras tree is as 4 copies of itself, together with the 3 squares in the depth 2 rendering.
+
+<svg id=divisionssvg viewBox="-3.4 -0.4 7.8 4.8">
+</svg>
+<script type="text/javascript" id="divisions">
+function usq(col){
+ return `<rect style="opacity:0.5;fill:${col};stroke:none" x=0 y=0 width=1 height=1 />`
+}
+
+function colTree(col){ return drawMany(7,usq(col)) }
+
+grd = grid(2,"stroke:lightgray")+grid()
+trees = drawScaled(
+    drawScaled(colTree("red"),colTree("orange")),
+    drawScaled(colTree("#d0d000"),colTree("green"))
+  ) + drawMany(2,usq("blue"))
+
+function mklet(c,x,y,col){
+  return `<text fill=${col} y=${-y-0.5} x=${x+0.5} text-anchor="middle" dominant-baseline="middle" font-size=0.9>${c}</text>`
+  }
+
+letters = mklet("B",0,2) +
+  mklet("C",-2,1,"gray") + mklet("D",-1,1,"gray") +
+  mklet("E",-2,0,"gray") + mklet("F",-1,0,"gray") +
+  mklet("W",1,1,"gray") + mklet("X",2,1,"gray") +
+  mklet("Y",1,0,"gray") + mklet("Z",2,0,"gray")
+
+draw(grd + trees + letters)
+
+// drawMany(2,`<rect style="opacity:0.5;fill:blue" x=0 y=0 width=1 height=1 />`))
+
+</script>
+<p>The tree may be divided into 28 squares in a 7x4 grid so that the largest square in the tree exactly fills one square of the grid. The 4 copies described above are nicely aligned to a subdivision of the grid, allowing each square of the grid to be described in terms of its 4 corners, each of which is either full, empty, a triangle, or an overlapping combination of squares of the original grid and their rotations. This lets us construct a non-deterministic automaton describing the shape. For example, the cell labeled B has tl-transitions to the cells C and W, tr-transitions to D and X, bl-transitions to E and Y and br-transitions to the cells F and Z. The transitions to C,D,E and F come from the yellow subtree and those labeled W,X,Y and Z come from the orange subtree.</p>
+
+<p>As rotations can be multiples of 90°, we need 4 states needed for each of the 28 original cells. For example, the cell labeled Y has a tr-transition to a state corresponding to Z rotated 90° clockwise.  The transitions from rotations are straightforward given the transitions from the originals. This gives a nondeterministic automaton with 4x28+4+1=117 states (the initial 28, their rotations, 4 triangles and 1 full square). This can be transformed into a deterministic automaton with 2<sup>116</sup>+1 states, but fortunately not all of them are needed. Instead we can start from the 28 singleton sets representing squares of the grid and discover that ~10000 states are reachable from those, which can be reduced to ~1000 by accounting for rotations and reflections.</p>
+
+<p>This gives a system of linear equations for the area of the shape described by each state. This system of equations has exactly one solution.</p>
+
+<p>
+Noting that the area of the closure of the Pythagoras tree would also be a solution to that system of linear equations, the fact that it has a unique solution implies that taking the closure does not change the area.</p>
+
+<h2>Details of the calculation</h2>
+<p>Firstly, here's the transition diagram, with the color of edges indicating which of the 4 subtrees the edge came from. The central nodes indicate the full node and the 4 triangles. </p>
+<svg id=graphsvg viewBox="-7 -13.4 15 17.8">
+</svg>
+<script type="text/javascript" id="graph">
+nodes={}
+edges={}
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  node([x,y]+"",x+0.5,y)
+}
+
+rots=["","R","I","L"]
+corners = ["bl","tl","tr","br"]
+ns = drawNodes()
+edgs = ""
+// Add full node and triangles
+node("F",0.5,-4)
+for(let c of corners){
+  edgs+=edge("F","F", c)
+  edgs+=edge([0,0]+"","F", c)
+}
+for(let i of [0,1,2,3]){
+  let c = corners[i]
+  node(c,0.5+((i&2)-1),-3-(!(i%3))*2)
+  edgs+=edge(c,"F",c)
+  edgs+=edge(c,c,corners[(i+1)%4])
+  edgs+=edge(c,c,corners[(i+3)%4])
+}
+// draw the depth 2 squares as 4 triangles each
+// toggling comments on the lines marked (*)
+// instead creates the graph for the case where
+// the triangle between a square and the subtrees
+// resting on it is filled in.
+edgs+=edge("-1,1","br","tr") // *
+//edgs+=edge("-1,1","F","tr") // *
+edgs+=edge("-1,1","tr","br")
+
+edgs+=edge("0,1","bl","tl")
+edgs+=edge("0,1","tl","bl") // *
+//edgs+=edge("0,1","F","bl") // *
+edgs+=edge("0,1","br","tr")
+edgs+=edge("0,1","tr","br") // *
+//edgs+=edge("0,1","F","br") // *
+
+edgs+=edge("1,1","bl","tl") // *
+//edgs+=edge("1,1","F","tl") // *
+edgs+=edge("1,1","tl","bl") 
+
+
+
+ns2 = drawNodes()
+
+// Rotations about (0.5,-4)
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  node([x,y]+"L",-y-3.5,(x+0.5)-4.5)
+  node([x,y]+"R",y+4.5,-(x+0.5)-3.5)
+  node([x,y]+"I",-(x+0.5)+1,-y-8)
+}
+pos = {
+"0,0":"bl",
+"0,1":"tl",
+"1,1":"tr",
+"1,0":"br"
+}
+
+edgs+="<g stroke=#d0d000>"
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  tx=x+2;  ty=y+4;
+  edgs += edge(""+[tx>>1,ty>>1],[x,y]+"",pos[[(tx+8)%2,(ty+8)%2]])
+}
+edgs+="</g><g stroke=orange>"
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  tx=x-1;  ty=y+4;
+  edgs += edge(""+[tx>>1,ty>>1],[x,y]+"",pos[[(tx+8)%2,(ty+8)%2]])
+}
+edgs+="</g><g stroke=red>"
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  tx=-y-2;  ty=x+3;
+  edgs += edge([tx>>1,ty>>1]+"",[x,y]+"L",pos[[(tx+8)%2,(ty+8)%2]])
+}
+edgs+="</g><g stroke=green>"
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  tx=y+3;  ty=3-x;
+  edgs += edge([tx>>1,ty>>1]+"",[x,y]+"R",pos[[(tx+8)%2,(ty+8)%2]])
+}
+edgs+="</g>"
+
+function rotate(n,i){// rotate node by i*90deg clockwise
+  if(n=="F") return "F"
+  else if((j=corners.indexOf(n))!=-1) return corners[(j+i)%4];
+  else{
+    let rot=0
+    if(n.match(/L|I|R/)){
+      rot=rots.indexOf(n[n.length-1])
+      n=n.substr(0,n.length-1)
+    }
+    return n+rots[(rot+i)%4]
+  }
+}
+// Add rotations
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  for (let l in edges[[x,y]]) for (let e of edges[[x,y]][l]){
+    for(let i of [1,2,3]){
+      edge([x,y]+rots[i], rotate(e,i), rotate(l,i) )
+    }
+  }
+}
+
+allNodes = ns2+`<g transform="rotate(90 0.5 -4)">${ns}</g>`+
+  `<g transform="rotate(180 0.5 -4)">${ns}</g>`+
+  `<g transform="rotate(270 0.5 -4)">${ns}</g>`
+
+draw("<g stroke=black>"+edgs+allNodes+"</g>")
+</script>
+
+Now we show all the transitions, including ones from rotated copies of the original and with edges colored according to the label associated with that edge.
+<svg id=fullgraphsvg viewBox="-7 -13.4 15 17.8">
+</svg>
+<script type="text/javascript" id="fullgraph">
+s=""
+for(let l of corners){s+=`<g stroke=${["red","orange","green","blue"][corners.indexOf(l)]}>`;
+  for(let src in edges)for(let dst of edges[src][l]){
+    s+=drawEdge(src,dst,l)
+  }
+  s+="</g>"
+}
+draw(s+"<g stroke=black>"+allNodes+"</g>")
+</script>
+<p> We now turn this non-deterministic automaton into a deterministic one. Since it would take a bit too long to make the graph of all 2<sup>117</sup> nodes, we'll do a depth-first search exploring the ones reachable from the starting 28. Because rotating and reflecting of a square doesn't change the area, we can reduce the number of states by choosing a canonical example for each set of equivalent nodes.</p>
+<script id="dgraph">
+for(let n in edges)for(let l in edges[n]){
+  edges[n][l].sort()
+}
+dgraph = {}
+function reflect(n){// reflect a node across the vertical axis
+  if(n=="F") return "F"
+  if((j=corners.indexOf(n))!=-1) return corners[3-j]
+  let rot=0
+  if(n.match(/L|I|R/)){
+      rot=rots.indexOf(n[n.length-1])
+      n=n.substr(0,n.length-1)
+  }
+  let [x,y] =n.split(",")
+  return [-x,y]+rots[(4-rot)%4]
+}
+assert=function(x){if(!x)throw "assertion failed"}
+assert(reflect("tl")=="tr")
+assert(reflect("-3,2L")=="3,2R")
+
+function canon(x){
+  if (x.indexOf("F")!=-1) return ["F"]
+  if (x.indexOf("0,0")!=-1) return ["F"]
+  if (x.indexOf("tl")!=-1 && x.indexOf("br")!=-1) return ["F"]
+  if (x.indexOf("bl")!=-1 && x.indexOf("tr")!=-1) return ["F"]
+  x.sort()
+  x=x.filter((e, i) => e !== x[i - 1])
+  x=x.filter((e,i)=> !e.match(/3,3/))
+  mn=x;
+  for(let j of [0,1]){
+    for(let i of [0,1,2,3]){
+      let r = x.map(n=>rotate(n,i)).sort()
+      if (r<mn) mn=r
+    }
+    x=x.map(reflect)
+  }
+  return mn
+}
+function explore(ns){
+  let k = ns.join(";")
+  if(dgraph[k]===undefined){
+    dgraph[k] = {}
+    for(let l of corners){
+      let result = []
+      for(let n of ns){
+        result = result.concat(edges[n][l])
+      }
+      let can = canon(result)
+      explore(can)
+      dgraph[k][l]=can
+    }
+  }
+}
+for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+  explore([[x,y]+""])
+}
+
+</script>
+<p>This representation is easy to convert into a system of linear equations, which then need to be solved.
+</p>
+<script id="solvelin">
+console.log("test")
+function fastlog(n){
+  ((n+"").length*10)/3
+}
+
+function gcd(a,b){
+  // Euclid's algorithm for GCD.
+  // This is not optimal given the sizes of numbers involved,
+  // but writing a better algorithm in js would need a lot
+  // more code
+  if(a>b) [a,b]=[b,a]
+  while(a>0){
+    let r=b%a
+    b=a
+    a=r
+  }
+  return b
+}
+function norm(a,b){
+  let g = gcd(a,b)
+  return [a/g,b/g]
+}
+function add(p,q){
+  return norm(p[0]*q[1]+q[0]*p[1], p[1]*q[1])
+}
+function sub(p,q){
+  return norm(p[0]*q[1]-q[0]*p[1], p[1]*q[1])
+}
+function mul(p,q){
+  return norm(p[0]*q[0],p[1]*q[1])
+}
+function mulN(p,q){
+  return [p[0]*q[0],p[1]*q[1]]
+}
+
+ks = Object.keys(dgraph).filter(k=>k!="")
+//fromID = Object.keys(dgraph).filter(k=>k!="")
+//toID = {}
+//fromID.map((e,i)=>toID[e]=i)
+
+// 4*a == sum(b*sys[a][b][0]/sys[a][b][1] for b in sys[a])
+sys = {} // system of linear equations.
+rev = {} //dict of sets giving the reverse map to sys
+for(let k of ks){
+  rev[k]={}
+  sys[k]={}
+}
+for(let k of ks){
+  for(let l in dgraph[k]){
+    let v = dgraph[k][l].join(";")
+    if(v!=""){// the empty list has no area
+      if(sys[k][v]===undefined) sys[k][v]=[1n,1n]
+      else sys[k][v][0] += 1n // works because all denominators are 1 for now
+      if(rev[v]===undefined)console.log(k,v)
+      rev[v][k]=true
+    }
+  }
+}
+results={}
+function removeVar(v){
+  // Remove a variable from the system of linear equations
+  let eqn = sys[v]
+  let fac = [4n,1n]
+  if(eqn[v]!==undefined) fac=sub(fac,eqn[v])
+  if(fac[0]==0n) throw "can't cope with that"
+  fac=[fac[1],fac[0]]
+  let res={}
+  for(let k in eqn)if(k!=v){
+    res[k]=mul(eqn[k],fac);
+    delete rev[k][v];
+  }
+  results[v]=res
+  for(let u in rev[v])if(u!=v){
+    // substitute res for v in sys[u]
+    let sysu = sys[u]
+    let cv = sysu[v]
+    delete sysu[v]
+    for(let k in res){
+      let ck=sysu[k]
+      if (ck===undefined){
+        sysu[k] = mul(res[k],cv)
+        rev[k][u] = true
+      }
+      else sysu[k] = add(ck,mulN(res[k],cv))
+    }
+  }
+}
+function sz(k){
+  return Object.keys(rev[k]).length*Object.keys(sys[k]).length
+}
+toBeRemoved = Object.keys(sys).filter(i=>i!="F").sort((a,b) => sz(a) - sz(b))</script>
+<p>Unfortuately, it takes a while (20-30 seconds on my machine) to solve this system of linear equations. If you want to confirm the result for yourself, change the first line of the script below from "if(false){" to "if(true){" and run it. The result is logged to the browser console. Alternatively, get the Python code from <a href="https://github.com/penteract/pythagorasTree/blob/master/automaton.py">here</a>, which uses SymPy for solving the system of linear equations and takes about a second to run. </p>
+<script id=result>
+if(false){
+  startt=new Date()
+  removed=[]
+  while(toBeRemoved.length>0){
+    let i=0
+    while(i< toBeRemoved.length/200){
+      removeVar(toBeRemoved[i++])
+      if(toBeRemoved.length-i<100)console.log(toBeRemoved.length-i,(new Date()) - startt)
+      //if(toBeRemoved.length-i<90)break
+    }
+    removed=removed.concat(toBeRemoved.slice(0,i))
+    toBeRemoved=toBeRemoved.slice(i).sort((a,b) => sz(a) - sz(b))
+    console.log(toBeRemoved.length,(new Date()) - startt)
+    //if(toBeRemoved.length<90)break;
+  }
+  //results = Object.assign({}, results);
+  remd = removed.map(x=>x)
+  finalResults={}
+  remd.reverse()
+  for(let n of remd){
+    let tot = [0n,1n]
+    for(let k in results[n]){
+      if(k=="F") tot = add(tot,results[n][k])
+      else tot = add(tot,mulN (results[n][k],finalResults[k]))
+    }
+    finalResults[n]=tot
+  }
+  finalResults["F"]=[1n,1n]
+  // make the final total
+  tot = [0n,1n]
+  for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+    let can = canon([[x,y]+""])
+    if(can!="")
+      tot = add(tot, finalResults[canon([[x,y]+""]).join(";")])
+  }
+  console.log("Final result (a ratio)","\n"+tot[0]+"\n/\n"+tot[1])
+}
+
+</script>
+
+<h2></h2>
+
+<h2>Other Results</h2>
+<p>This method can also be used to calculate the area of the Pythagoras Tree with the triangles between a node and the subtrees growing from it filled in:
+<table style="text-align:center;"><tbody>
+<tr><td style="border-bottom:2px solid black;">80605706690966227797244468721167282379053 </td></tr>
+<tr><td>5025557197283613113718784555470007578789</td></tr></tbody></table>
+This is noticably easier to compute.</p>
+
+<p>With a few more changes, we can compute the area of the C dragon (9/4 if drawn to match the Pythagoras tree, 1/4 if scaled so that the ends are 1 unit apart). I assume the area of the C dragon has already been found by someone else (it would be very obvious from computing approximations).
+</p>
+
+
+<h2>Footnotes</h2>
+
+<h3 id="fn:automata">Footnote: Automata</h3>
+<p>Technically we're using <a href="https://en.wikipedia.org/wiki/ω-automaton">ω-automata</a>, which accept or reject infinte strings (F is the only accepting state, and every path that reaches it stays there forever, so we don't need a very fancy acceptance condition).</p>
+	<p>Some points have multiple representations as infinite strings, but almost all of them don't, so we don't need to worry about them when calculating the area - formally, we are describing the points of the shape such that neither the x nor the y coordinate can be expressed as a*2<sup>b</sup> where a and b are integers. The excluded subset has measure 0, so this does not affect calculation of the area.</p>
+	
+	<p>An alternative would be to define the set described by an automaton as the set of points in the unit square such that all strings corresponding to the given point are accepted. The Pythagoras tree could be precisely described in this manner, although accounting for the open boundries of squares would require 8 additional states for partly open corners and edges</p>
+
+<h3 id="fn:closure">Footnote: Closure</h3>
+
+<p>Whether the squares are open or closed has no effect on the area of a finite depth rendering, therefore has no effect on the limit of the sequence of areas. Even if closed squares were used rather than open ones, the Pythagoras tree would not be closed, since it approaches but nevver reaches the line x=4.</p>
+
+<p>Whether the closure of the Pythagoras tree has a different area from the Pythagoras tree is a question that could be addressed directly, but the automaton we constructed also describes the closure of the Pythagoras tree (except for some lines of the form  x±y=a*2<sup>b</sup> , for integers a and b which also have measure zero), so the areas of pieces of the closure of the Pythagoras tree satisfy the same system of linear equations. Since there is only one solution to that system, the area of the Pythagoras tree is equal to the area of its closure.</p>
+
+
+<p>It was tempting to say (for convenience when dealing with automata) that the axis-aligned squares (added at odd depths) are closed while the other squares are open, but that smells a bit.</p>
+
+
+<script id=footer>
+function editScript(txt, otherbut, scrid){
+  return function(e){
+    let but=e.target
+    otherbut.style.display=""
+    but.style.width="50%"
+    txt.style.display=""
+    console.log(scrid)
+    but.innerText="hide code ^"
+    but.onclick=hideScript(txt,otherbut,scrid)
+  }
+}
+function hideScript(txt,otherbut,scrid){
+  return function(e){
+    let but=e.target
+    otherbut.style.display="none"
+    txt.style.display="none"
+    but.style.width="100%"
+    but.innerText="edit script V"
+    but.onclick=editScript(txt,otherbut,scrid)
+  }
+}
+
+for (let scr of document.getElementsByTagName("script")){
+  if (scr.id!="header" && scr.id!="footer"){
+    let but = document.createElement("button")
+    let but2 = document.createElement("button")
+    let txt = document.createElement("textarea")
+    but.innerText="edit script V"
+    but.style="width:100%"
+    but.onclick=editScript(txt,but2,scr.id)
+    scr.parentElement.insertBefore(but,scr)
+    but2.style="display:none;width:50%"
+    but2.innerText="Run Code"
+    let scrid = scr.id
+    but2.onclick = function(){
+      document.getElementById(scrid).remove()
+      let newScr=document.createElement("script")
+      newScr.id=scrid
+      newScr.innerHTML=txt.value
+      document.body.append(newScr)
+    }
+
+    scr.parentElement.insertBefore(but2,scr)
+    txt.value=scr.innerText.trim();
+    // https://stackoverflow.com/questions/881085/count-the-number-of-occurrences-of-a-character-in-a-string-in-javascript
+    txt.rows=(scr.innerText.match(/\n/g) || []).length + 3
+    txt.style="display:none;width:100%"
+    scr.parentElement.insertBefore(txt,scr)
+  }
+}
+</script>
+
+</body>
+</html>
