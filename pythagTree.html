@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -10,7 +11,7 @@ text{
 svg{
   transform:scaleY(-1);
   stroke-width:.03;
-  font-size:0.3;
+  font-size:0.3px;
 }
 /*path,line{
   stroke:black;
@@ -60,17 +61,10 @@ function drawMany(n,thing){
   }
   return ""
 }
-function grid(n,sty){
-  n||=1
-  sty||="stroke:gray"
-  let res=`<g style=${sty} >`
-  for(c=-10;c<10;c++){
-    res+=`<line x1=${c/n} y1=-10 x2=${c/n} y2=10 />`
-    res+=`<line y1=${c/n} x1=-10 y2=${c/n} x2=10 />`
-  }
-  return res + "</g>"
+function usq(col){
+ return `<rect style="opacity:0.5;fill:${col};stroke:none" x=0 y=0 width=1 height=1 />`
 }
-draw(grid()+ drawMany(10,`<rect style="opacity:0.5;fill:blue" x=0 y=0 width=1 height=1 />`))
+draw(drawMany(10,usq("blue")))
 </script>
 
 <h2>Some definitions</h2>
@@ -80,7 +74,7 @@ Let d<sub>0</sub> be the transformation which rotates 45 degrees anticlockwise a
 and let d<sub>1</sub> be the transformation which rotates 45 degrees clockwise and scales by 1/√2 centered on (2,1).
 </p>
 <p>
-Define the <b>depth 1 rendering</b> of the Pythagoras tree to consist of an open unit square with corners at (0,0) and (1,1), and the depth n+1 rendering to consist of 2 copies of the depth n rendering transformed by d<sub>0</sub> and d<sub>1</sub> together with the unit square of the depth 1 rendering. This gives the arrangement described in Sec. \ref{sec:intro}. The Pythagoras tree is the union of the set of finite depth renderings.
+Define the <b>depth 1 rendering</b> of the Pythagoras tree to consist of an open unit square with corners at (0,0) and (1,1), and the depth n+1 rendering to consist of 2 copies of the depth n rendering transformed by d<sub>0</sub> and d<sub>1</sub> together with the unit square of the depth 1 rendering. This gives the arrangement described in the introduction. The Pythagoras tree is the union of the set of finite depth renderings.
 </p>
 
 <p>
@@ -127,15 +121,11 @@ function edge(src,dst,lab){
 }
 function drawEdge(src,dst,lab){
   if(src==dst) return loop(src,[lab])
-  ;[x1,y1]=nodes[src];
-  ;[x2,y2]=nodes[dst];
-  mx=(x1+x2)/2
-  my=(y1+y2)/2
-  dx=x2-x1;
-  dy=y2-y1;
+  ;[x1,y1]=nodes[src];[x2,y2]=nodes[dst]
+  mx=(x1+x2)/2;my=(y1+y2)/2
+  dx=x2-x1;dy=y2-y1
   d=Math.sqrt(dx*dx+dy*dy)
-  x2-=.3*dx/d
-  y2-=.3*dy/d
+  x2-=.3*dx/d;y2-=.3*dy/d
   return `<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} />` +
     `<path d="M ${x2} ${y2} l ${(dy-dx)/d/5} ${(-dy-dx)/d/5} " />` +
     `<path d="M ${x2} ${y2} l ${(-dy-dx)/d/5} ${(-dy+dx)/d/5} " />` +
@@ -150,7 +140,7 @@ function loop(node,labs){
 function drawNodes(){
   //I'd like to use dominant-baseline="middle" for the text nodes,
   // but that places the text inconsistently at different zoom levels
-  // (for me on Firefox on Linux, it was lower than it should be 
+  // (for me on Firefox on Linux, it was lower than it should be
   // at zoom levels below 200%, getting worse as the zoom level got lower)
   // weirdly, this depended on zoom level, not the size of the svg
   // (which could be kept constant by using a smaller browser window
@@ -182,8 +172,15 @@ One way to look at the Pythagoras tree is as 4 copies of itself, together with t
 <svg id=divisionssvg viewBox="-3.4 -0.4 7.8 4.8">
 </svg>
 <script type="text/javascript" id="divisions">
-function usq(col){
- return `<rect style="opacity:0.5;fill:${col};stroke:none" x=0 y=0 width=1 height=1 />`
+function grid(n,sty){
+  n||=1
+  sty||="stroke:gray"
+  let res=`<g style=${sty} >`
+  for(c=-10;c<10;c++){
+    res+=`<line x1=${c/n} y1=-10 x2=${c/n} y2=10 />`
+    res+=`<line y1=${c/n} x1=-10 y2=${c/n} x2=10 />`
+  }
+  return res + "</g>"
 }
 
 function colTree(col){ return drawMany(7,usq(col)) }
@@ -264,7 +261,7 @@ edgs+=edge("0,1","tr","br") // *
 
 edgs+=edge("1,1","bl","tl") // *
 //edgs+=edge("1,1","F","tl") // *
-edgs+=edge("1,1","tl","bl") 
+edgs+=edge("1,1","tl","bl")
 
 
 
@@ -283,27 +280,27 @@ pos = {
 "1,0":"br"
 }
 
-edgs+="<g stroke=#d0d000>"
-for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
-  tx=x+2;  ty=y+4;
-  edgs += edge(""+[tx>>1,ty>>1],[x,y]+"",pos[[(tx+8)%2,(ty+8)%2]])
+
+function addCopy(color, transform, R){
+  // add edges from a scaled copy of the grid copy of the grid
+  // transform is a function describing the transformation from the whole tree
+  //   to the scaled copy before scaling
+  // R indicates the direction of rotation and can be computed from transform
+  //   let [lx,ly] = transform(128,0)
+  //   let R = ["I","L","R",""][(lx+ly+148>>8)+(lx-ly+148>>7)]
+  let s = `<g stroke=${color}>`
+  for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+    let [tx,ty]=transform(x,y)
+    s += edge(""+[tx>>1,ty>>1],[x,y]+R,pos[[(tx+8)%2,(ty+8)%2]])
+  }
+  return s+"</g>"
 }
-edgs+="</g><g stroke=orange>"
-for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
-  tx=x-1;  ty=y+4;
-  edgs += edge(""+[tx>>1,ty>>1],[x,y]+"",pos[[(tx+8)%2,(ty+8)%2]])
-}
-edgs+="</g><g stroke=red>"
-for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
-  tx=-y-2;  ty=x+3;
-  edgs += edge([tx>>1,ty>>1]+"",[x,y]+"L",pos[[(tx+8)%2,(ty+8)%2]])
-}
-edgs+="</g><g stroke=green>"
-for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
-  tx=y+3;  ty=3-x;
-  edgs += edge([tx>>1,ty>>1]+"",[x,y]+"R",pos[[(tx+8)%2,(ty+8)%2]])
-}
-edgs+="</g>"
+
+edgs += addCopy("#d0d000", (x,y)=>[x+2,y+4],"")
+edgs += addCopy("orange", (x,y)=>[x-1,y+4],"")
+edgs += addCopy("red", (x,y)=>[-y-2,x+3],"L")
+edgs += addCopy("green", (x,y)=>[y+3,3-x],"R")
+
 
 function rotate(n,i){// rotate node by i*90deg clockwise
   if(n=="F") return "F"
@@ -346,12 +343,8 @@ for(let l of corners){s+=`<g stroke=${["red","orange","green","blue"][corners.in
 }
 draw(s+"<g stroke=black>"+allNodes+"</g>")
 </script>
-<p> We now turn this non-deterministic automaton into a deterministic one. Since it would take a bit too long to make the graph of all 2<sup>117</sup> nodes, we'll do a depth-first search exploring the ones reachable from the starting 28. Because rotating and reflecting of a square doesn't change the area, we can reduce the number of states by choosing a canonical example for each set of equivalent nodes.</p>
+<p> We now turn this non-deterministic automaton into a deterministic one. Since it would take a bit too long to make the graph of all 2<sup>117</sup> nodes, we'll do a depth-first search exploring the ones reachable from the starting 28. Because rotating and reflecting of a square doesn't change the area, we can reduce the number of states by choosing a canonical example from each set of equivalent nodes.</p>
 <script id="dgraph">
-for(let n in edges)for(let l in edges[n]){
-  edges[n][l].sort()
-}
-dgraph = {}
 function reflect(n){// reflect a node across the vertical axis
   if(n=="F") return "F"
   if((j=corners.indexOf(n))!=-1) return corners[3-j]
@@ -385,7 +378,7 @@ function canon(x){
   }
   return mn
 }
-function explore(ns){
+function explore(ns,dgraph,edges){
   let k = ns.join(";")
   if(dgraph[k]===undefined){
     dgraph[k] = {}
@@ -395,24 +388,23 @@ function explore(ns){
         result = result.concat(edges[n][l])
       }
       let can = canon(result)
-      explore(can)
+      explore(can,dgraph,edges)
       dgraph[k][l]=can
     }
   }
 }
-for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
-  explore([[x,y]+""])
+function mkDeterministic(edges){
+  let dgraph={}
+  for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
+    explore([[x,y]+""],dgraph,edges)
+  }
+  return dgraph
 }
 
 </script>
 <p>This representation is easy to convert into a system of linear equations, which then need to be solved.
 </p>
 <script id="solvelin">
-console.log("test")
-function fastlog(n){
-  ((n+"").length*10)/3
-}
-
 function gcd(a,b){
   // Euclid's algorithm for GCD.
   // This is not optimal given the sizes of numbers involved,
@@ -443,33 +435,39 @@ function mulN(p,q){
   return [p[0]*q[0],p[1]*q[1]]
 }
 
-ks = Object.keys(dgraph).filter(k=>k!="")
 //fromID = Object.keys(dgraph).filter(k=>k!="")
 //toID = {}
 //fromID.map((e,i)=>toID[e]=i)
 
-// 4*a == sum(b*sys[a][b][0]/sys[a][b][1] for b in sys[a])
-sys = {} // system of linear equations.
-rev = {} //dict of sets giving the reverse map to sys
-for(let k of ks){
-  rev[k]={}
-  sys[k]={}
-}
-for(let k of ks){
-  for(let l in dgraph[k]){
-    let v = dgraph[k][l].join(";")
-    if(v!=""){// the empty list has no area
-      if(sys[k][v]===undefined) sys[k][v]=[1n,1n]
-      else sys[k][v][0] += 1n // works because all denominators are 1 for now
-      if(rev[v]===undefined)console.log(k,v)
-      rev[v][k]=true
+//dgraph = mkSystem(mkDeterministic(edges))
+function mkSystem(dgraph){
+  // 4*a == sum(b*sys[a][b][0]/sys[a][b][1] for b in sys[a])
+  let sys = {} // system of linear equations.
+  let rev = {} //dict of sets giving the reverse map to sys
+  let vars = Object.keys(dgraph).filter(k=>k!="")
+  for(let k of vars){
+    rev[k]={}
+    sys[k]={}
+  }
+  for(let k of vars){
+    for(let l in dgraph[k]){
+      let v = dgraph[k][l].join(";")
+      if(v!=""){// the empty list has no area
+        if(sys[k][v]===undefined) sys[k][v]=[1n,1n]
+        else sys[k][v][0] += 1n // works because all denominators are 1 for now
+        rev[v][k]=true
+      }
     }
   }
+  return {
+    sys : sys,
+    rev : rev,
+    results : {}
+  }
 }
-results={}
-function removeVar(v){
+function removeVar(v,system){
   // Remove a variable from the system of linear equations
-  let eqn = sys[v]
+  let eqn = system.sys[v]
   let fac = [4n,1n]
   if(eqn[v]!==undefined) fac=sub(fac,eqn[v])
   if(fac[0]==0n) throw "can't cope with that"
@@ -477,58 +475,60 @@ function removeVar(v){
   let res={}
   for(let k in eqn)if(k!=v){
     res[k]=mul(eqn[k],fac);
-    delete rev[k][v];
+    delete system.rev[k][v];
   }
-  results[v]=res
-  for(let u in rev[v])if(u!=v){
+  system.results[v]=res
+  for(let u in system.rev[v])if(u!=v){
     // substitute res for v in sys[u]
-    let sysu = sys[u]
+    let sysu = system.sys[u]
     let cv = sysu[v]
     delete sysu[v]
     for(let k in res){
       let ck=sysu[k]
       if (ck===undefined){
         sysu[k] = mul(res[k],cv)
-        rev[k][u] = true
+        system.rev[k][u] = true
       }
       else sysu[k] = add(ck,mulN(res[k],cv))
     }
   }
 }
-function sz(k){
-  return Object.keys(rev[k]).length*Object.keys(sys[k]).length
-}
-toBeRemoved = Object.keys(sys).filter(i=>i!="F").sort((a,b) => sz(a) - sz(b))</script>
-<p>Unfortuately, it takes a while (20-30 seconds on my machine) to solve this system of linear equations. If you want to confirm the result for yourself, change the first line of the script below from "if(false){" to "if(true){" and run it. The result is logged to the browser console. Alternatively, get the Python code from <a href="https://github.com/penteract/pythagorasTree/blob/master/automaton.py">here</a>, which uses SymPy for solving the system of linear equations and takes about a second to run. </p>
+</script>
+<p>Unfortuately, it takes a while (10-30 seconds on my machine) to solve this system of linear equations. If you want to confirm the result for yourself, change the first line of the script below from "if(false){" to "if(true){" and run it. The result is logged to the browser console. Alternatively, get the Python code from <a href="https://github.com/penteract/pythagorasTree/blob/master/automaton.py">here</a>, which uses SymPy for solving the system of linear equations and takes about a second to run. </p>
 <script id=result>
 if(false){
-  startt=new Date()
-  removed=[]
-  while(toBeRemoved.length>0){
-    let i=0
-    while(i< toBeRemoved.length/200){
-      removeVar(toBeRemoved[i++])
-      if(toBeRemoved.length-i<100)console.log(toBeRemoved.length-i,(new Date()) - startt)
-      //if(toBeRemoved.length-i<90)break
+  function solve(system){
+    function sz(k,system){
+      return Object.keys(system.rev[k]).length*Object.keys(system.sys[k]).length
     }
-    removed=removed.concat(toBeRemoved.slice(0,i))
-    toBeRemoved=toBeRemoved.slice(i).sort((a,b) => sz(a) - sz(b))
-    console.log(toBeRemoved.length,(new Date()) - startt)
-    //if(toBeRemoved.length<90)break;
-  }
-  //results = Object.assign({}, results);
-  remd = removed.map(x=>x)
-  finalResults={}
-  remd.reverse()
-  for(let n of remd){
-    let tot = [0n,1n]
-    for(let k in results[n]){
-      if(k=="F") tot = add(tot,results[n][k])
-      else tot = add(tot,mulN (results[n][k],finalResults[k]))
+    let toBeRemoved = Object.keys(system.sys).filter(i=>i!="F").sort((a,b) => sz(a,system) - sz(b,system))
+    let startt=new Date()
+    let removed=[]
+    while(toBeRemoved.length>0){
+      let i=0
+      while(i< toBeRemoved.length/200){
+        removeVar(toBeRemoved[i++],system)
+      }
+      removed=removed.concat(toBeRemoved.slice(0,i))
+      toBeRemoved=toBeRemoved.slice(i).sort((a,b) => sz(a,system) - sz(b,system))
+      console.log("variables remaining: ",toBeRemoved.length,"  time elapsed(ms): ",(new Date()) - startt)
     }
-    finalResults[n]=tot
+    finalResults={}
+    removed.reverse()
+    console.log("Computing final results")
+    for(let n of removed){
+      let tot = [0n,1n]
+      for(let k in system.results[n]){
+        if(k=="F") tot = add(tot,system.results[n][k])
+        else tot = add(tot,mulN (system.results[n][k],finalResults[k]))
+      }
+      finalResults[n]=tot
+    }
+    finalResults["F"]=[1n,1n]
+    return finalResults
   }
-  finalResults["F"]=[1n,1n]
+
+  results = solve(mkSystem(mkDeterministic(edges)))
   // make the final total
   tot = [0n,1n]
   for(let x=-3;x<=3;x++)for(let y=0;y<=3;y++){
@@ -559,7 +559,7 @@ This is noticably easier to compute.</p>
 <h3 id="fn:automata">Footnote: Automata</h3>
 <p>Technically we're using <a href="https://en.wikipedia.org/wiki/ω-automaton">ω-automata</a>, which accept or reject infinte strings (F is the only accepting state, and every path that reaches it stays there forever, so we don't need a very fancy acceptance condition).</p>
 	<p>Some points have multiple representations as infinite strings, but almost all of them don't, so we don't need to worry about them when calculating the area - formally, we are describing the points of the shape such that neither the x nor the y coordinate can be expressed as a*2<sup>b</sup> where a and b are integers. The excluded subset has measure 0, so this does not affect calculation of the area.</p>
-	
+
 	<p>An alternative would be to define the set described by an automaton as the set of points in the unit square such that all strings corresponding to the given point are accepted. The Pythagoras tree could be precisely described in this manner, although accounting for the open boundries of squares would require 8 additional states for partly open corners and edges</p>
 
 <h3 id="fn:closure">Footnote: Closure</h3>
@@ -579,7 +579,6 @@ function editScript(txt, otherbut, scrid){
     otherbut.style.display=""
     but.style.width="50%"
     txt.style.display=""
-    console.log(scrid)
     but.innerText="hide code ^"
     but.onclick=hideScript(txt,otherbut,scrid)
   }
