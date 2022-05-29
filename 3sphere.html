@@ -1,0 +1,365 @@
+<html>
+<head>
+<script>
+
+"use strict";
+
+var canvas,timer,keystate,lt
+
+var objs
+var objects =[]
+var collist=["#FFF","#F00","#0F0","#00F","#000","#0FF","#F0F","#FF0"]
+var hexdigs="0123456789ABCDEF"
+
+
+
+/* STRUCTURE of a 3-sphere:
+POINTs (p) are points in R^4 with distance 1 from the origin, represented as [w,x,y,z]
+
+VECTORS (v) in this setting are intrinsically associated with a point and
+ represent a vectors in the tanget to the 3-sphere at that point.
+ they are stored as vectors in R^4 perpendicular to the point they belong to.
+ their length represents the angle in radians moved when travelling 1 unit in the direction of the vector
+ 
+an ORIENTATION (or) is [p,[v1,v2,v3]]
+where v1,v2,v3 form an orthonormal basis for the tangent space at p
+(p,v1,v2,v3 all have length 1 and are perpendicular to each other)
+*/
+
+
+// Functions
+function col(r,g,b){//returns a valid color string from individual rbg values
+  return "#"+(b+g*256+r*256*256).toString(16).lpad("0",6)}
+
+function invcol(c){//given a colour as a hex string return its inverse
+	s=c[0]
+	for(var i=1;i<c.length;i++){
+		s+=hexdigs[15-hexdigs.indexOf(c[i])]
+	}
+	return s
+}  
+ 
+function feq(x,y){//returns true if 2 floats are close enough to be considered equal
+	if (Math.abs(x-y)<=0.0000000000001) return true;
+	if (Math.abs(x-y)/(Math.abs(x)+Math.abs(y))<=0.000000000001) return true;
+	return false
+}
+
+//standard vector space functions
+function D(p1,p2){//dot product of p1 and p2
+	var sum=0
+	p1.forEach((x,i) => sum+=x*p2[i])
+	return sum
+}
+
+function perpc(v1,v2){//return the component of v2 perpendicular to v1
+	return addmul(v2,v1,-D(v1,v2)/D(v1,v1))
+}
+
+function pyth(x,y){
+	return Math.sqrt(x*x+y*y)
+}
+
+function len(p){//dist from origin in R^4
+	return Math.sqrt(D(p,p))
+}
+function norm(p){//normalizes a vector
+	var l=len(p)
+	return(p.map(x=>x/l))
+};
+function psum(p1,p2){//add 2 vectors in 4D space
+	return p1.map((x,j)=>x+p2[j])
+}
+
+function addmul(p1,p2,k){//p1+p2*k
+	return p1.map((x,j)=>x+p2[j]*k)
+}
+function addmul2(p1,k1,p2,k2){
+	return p1.map((x,j)=>x*k1+p2[j]*k2)
+}
+function diff(p1,p2){//the vector which can move you from p1 to p2
+	var dotp = D(p1,p2)
+	var vd = addmul(p2,p1,-dotp)
+	//console.log(vd)
+	var dist = len(vd)
+	var theta = Math.asin(dist)
+	if (dotp<0) theta=Math.PI-theta
+	return vd.map(x => (theta/dist)*x)
+}
+
+function move(p,v,t){//move p by v*t - only works if t*len(v) is in (-pi/2,pi/2)
+	var d = len(v)
+	if(Math.abs(d*t)>=Math.PI/2)console.log("error, angle too large")
+	return norm(addmul(p,v,Math.tan(d*t)/d))
+}
+
+
+function part(p,v1,t,v2){// move v2 t units along v1 from p (parrallel transport, I think)
+	//assume p(v1)==p(v2)
+
+	//first find v2-v1*<v1,v2>
+	// keep that component the same
+	if(D(p,v1)>0.001) console.log(["nonperp1",D(p,v1),p,v1])
+	if(D(p,v2)>0.001) console.log(["nonperp2",D(p,v2),p,v2])
+	
+	var d12 = D(v1,v2)
+	var d11 = D(v1,v1)
+	
+	var v2a = addmul(v2,v1,-d12/d11)
+	//console.log(v2a)
+	// now rotate
+	var p2 = move(p,v1,t)
+	var v1rev = diff(p2,p)
+	//console.log(v1rev)
+	return addmul(v2a,v1rev,-d12/(t*d11))
+	
+}
+
+class Drawable{
+	constructor(pos,size,col){
+		this.pos = pos
+		this.size = size
+		this.col = col
+		this.destroyed = false
+		this.collides = false
+		objects.push(this)
+	}
+	destroy(){
+		this.destroyed=true
+	}
+}
+
+
+class Moveable extends Drawable{
+	constructor(pos,size,col,vel){
+		super(pos,size,col)
+		this.vel=vel
+	}
+	move(dt){
+		var v = part(this.pos,this.vel,dt,this.vel)
+		this.pos = move(this.pos,this.vel,dt)
+		this.vel = v
+	}
+}
+
+class Bullet extends Moveable {
+	constructor(pos,dir){
+		super(pos,0.2,"#222",dir)
+		this.collides = "Bullet"
+	}
+}
+
+class Oriented extends Moveable{
+	constructor(pos,or){
+		super(pos,1,undefined,or[0])
+		this.or = or
+	}
+	move(dt){
+		this.or = this.or.map(v=>part(this.pos,this.vel,dt,v))
+		this.pos = move(this.pos,this.vel,dt)
+		this.vel = this.or[0]
+	}
+}
+/*
+Oriented.prototype.move = function(t){//moves an object in the direction it is facing
+	this.or = this.or.map(v=>part(this.pos,this.vel,t,v))
+	this.pos=move(this.pos,this.vel,t)
+	this.vel=this.or[0]
+	move(dt){
+		var v = part(this.pos,this.vel,dt,this.vel)
+		this.pos = move(this.pos,this.vel,t)
+		this.vel = v
+	}
+}
+*/
+Oriented.prototype.rot = function(c1,c2,t){//rotate an object between axes c1 and c2 by angle t
+	var v1=this.or[c1]
+	var v2=this.or[c2]
+	this.or[c1] = addmul2(v1,Math.cos(t),v2,Math.sin(t))
+	this.or[c2] = addmul2(v2,Math.cos(t),v1,Math.sin(-t))
+}
+
+function put(place,thing,col){//put an object(a set of points) on into the space (place should be [pos,orientation])
+	var p=place.pos
+	var or=place.or
+	thing.forEach(function(o){
+		var v=[0,0,0,0]
+		or.forEach((x,i)=>v=addmul(v,x,o[i]))
+		new Drawable(move(p,v,0.1),0.5,col)
+	})
+}
+
+function randomPoint(dim){
+	var a = Array(dim).fill(1)
+	while(len(a)>1) a = a.map(x=>Math.random())
+	return norm(a)
+}
+class Asteroid extends Moveable{
+	constructor(){
+		var p = randomPoint(4)
+		var p2 = randomPoint(4)
+		super(p,2,"#DDD",perpc(p,p2))
+		this.collides="Asteroid"
+	}
+	split(){
+		if (this.size>0.5){
+			for (var i=0;i<2;i+=1){
+				var a = new Asteroid()
+				a.pos = this.pos.slice()
+				a.size = this.size/2
+				a.vel = psum(this.vel,perpc(a.pos,randomPoint(4)))
+			}
+		}
+		this.destroy()
+	}
+}
+
+var CENTER = [250,250]
+var SCALE=250
+var PROJECTIVE = false
+
+
+var player = new Oriented([1,0,0,0],[[0,1,0,0],[0,0,1,0],[0,0,0,1]]);
+player.collides="Player";
+
+[0,1,2,3].forEach(function(i){
+	objects.push(new Drawable(([0,1,2,3]).map(j=>j==i?1:0),1,collist[i]));
+	objects.push(new Drawable(([0,1,2,3]).map(j=>j==i?-1:0),1,collist[i+4]))
+	}
+)
+
+console.log("hi")
+
+//var bullets = []
+//var asteroids = []
+
+var collisions={}
+
+function addcoll(x,y,f){
+	collisions[x+y] = f;
+	if (x!=y) collisions[y+x] = (y,x)=>f(x,y);
+}
+addcoll("Asteroid","Bullet",(x,y)=>{y.destroy();x.split()})
+addcoll("Player","Asteroid",(x,y)=>{x.destroy();y.split()})
+function draw(){
+	canvas.fillStyle = "#888"
+	canvas.fillRect(0,0,500,500)
+	objs = [];
+	objects.forEach(function(o){
+	if (o.col){
+		var ovp = diff(player.pos,o.pos)
+		var zyx = player.or.map(v=>D(v,ovp))
+		if (zyx[0]>0) objs.push([zyx,len(ovp),o])
+		else objs.push([zyx,(PROJECTIVE?1:2)*Math.PI-len(ovp),o])
+	}})
+	objs.sort((o1,o2)=>o2[1]-o1[1])
+	objs.forEach(function(o){
+		var zyx = o[0]
+		if(Math.abs(Math.sin(o[1]))>0.00001){
+			canvas.fillStyle = o[2].col
+			canvas.beginPath()
+			canvas.arc(SCALE*zyx[2]/zyx[0]+CENTER[0],SCALE*zyx[1]/zyx[0]+CENTER[1],o[2].size*10/Math.abs(Math.sin(o[1])),0,Math.PI*2)
+			canvas.fill()
+			//canvas.fillStyle = "#222"
+			//canvas.fillText(o[2].toFixed(2),SCALE*zyx[2]/zyx[0]+CENTER[0],SCALE*zyx[1]/zyx[0]+CENTER[1]);
+		}
+	})
+	if (player.destroyed){
+		canvas.fillStyle = "#08F"
+		canvas.fillText("dead",240,240)
+	}
+}
+
+function timestep(dt){
+	if (keystate[37]) player.rot(0,2,-TURN*dt)
+	if (keystate[39]) player.rot(0,2,TURN*dt)
+	if (keystate[38]) player.rot(0,1,-TURN*dt)
+	if (keystate[40]) player.rot(0,1,TURN*dt)
+	if (keystate[81]) player.rot(1,2,TURN*dt)
+	if (keystate[69]) player.rot(2,1,TURN*dt)
+	if (keystate[32] && (time%FIRERATE==0)) {
+		new Bullet(player.pos.slice(),addmul(player.vel,player.vel,5))
+		console.log("fire")
+	}
+	
+	//player.move(dt)
+	var os=objects
+	var colls = []
+	os.forEach(o=>{
+		if(o.collides){
+			colls.forEach(c=>{
+				var f=collisions[c.collides+o.collides]
+				if (f && len(addmul(c.pos,o.pos,-1))<(c.size+o.size)*0.1) f(c,o)
+			})
+			colls.push(o)
+		}
+	})
+	objects=[]
+	os.forEach(o=>{
+		if(!o.destroyed){
+		if (o.vel)
+			o.move(dt);
+			objects.push(o)
+		}
+		
+	})
+	//movingObjects.forEach(o=>o[0].move(dt))//
+	time+=1
+}
+
+var octohedron = [];
+([0,1,2]).forEach(function(i){
+	octohedron.push(([0,1,2]).map(j=>j==i?1:0))
+	octohedron.push(([0,1,2]).map(j=>j==i?-1:0))
+})
+var place = new Oriented([1,0,0,0],[[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+put(place,octohedron,"#F80")
+
+var time=0; //number of time steps that have happened
+var keystate = Array(128).fill(false)
+
+var keysused = [32,37,38,39,40]
+var DT=0.002
+var TURN=10
+var FIRERATE=20
+
+document.addEventListener('DOMContentLoaded', function() {
+canvas=document.getElementById("world").getContext("2d")
+canvas.font = "bold 32px Arial";
+draw()
+
+ timer = setInterval(function(){
+	//console.log("hi")
+	//console.log(POS)
+	var t = Date.now()
+	console.log(t-lt)
+	lt = t
+	timestep(DT)
+	draw()
+}, 10);
+
+document.addEventListener("keydown", function(e){
+	keystate[e.which]=true
+    if (keysused.includes(e.which)) e.preventDefault();
+});	
+document.addEventListener("keyup", function(e){
+	//console.log(e.which)
+	keystate[e.which]=false
+	if (keysused.includes(e.which)) e.preventDefault()
+});
+document.addEventListener("keypress", function(e){
+	if (keysused.includes(e.which)) e.preventDefault()
+});
+
+});
+</script>
+</head>
+<body>
+<canvas width=500 height=500 id="world"></canvas>
+<canvas width=500 height=500 id="buffer" hidden=true></canvas>
+<br>
+Arrow keys to change direction, space to fire<br>
+You are always moving forwards, even if things look like they're getting smaller<br>
+<button onclick="new Asteroid()">asteroid</button>
+</body>
+</html>
