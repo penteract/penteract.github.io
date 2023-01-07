@@ -1,0 +1,66 @@
+<html>
+<head>
+    <title>Harvest</title>
+    <script type="text/javascript" src="import.js"> </script>
+    <script type="text/javascript" src="automata.js"> </script>
+    <script type="text/javascript" src="setup.js"> </script>
+    <script type="text/javascript" src="input.js"> </script>
+    <style type="text/css">
+/*canvas{
+    scale: 0.5;
+}*/
+#sparecanvas{
+    display: none;
+}
+
+/*
+@media(min-width:1080px){
+div#main{
+  writing-mode: vertical-lr;
+}
+}
+div#buttons{
+    writing-mode: initial;
+}*/
+#canvas{
+    float:left
+}
+/*
+#buttons{
+    float:right;
+}*/
+    </style>
+</head>
+<body>
+<div id="main">
+    <div id="canvas">
+        <canvas id="gamecanvas" width="1000" height="1000">
+    </canvas>
+    </div>
+    <div id="buttons">
+        Seeds: <span id="numseeds">0</span><br>
+        <button id="copybut" style="visibility:hidden" onclick="copy()">Save</button><br>
+        <button id="zoomoutbut" style="visibility:hidden" onclick="zoomOut()">Zoom Out</button><br>
+        <button id="zoominbut" style="visibility:hidden" onclick="zoomIn()">Zoom In (click)</button><br>
+        <button id="pastebut" onclick="paste()">Plant</button><br>
+        <button id="waitbut" style="visibility:hidden" onclick="wait()">Grow</button><br>
+        <button id="harvestbut" style="visibility:hidden" onclick="harvest()">Harvest</button><br>
+        <button id="expandbut" style="visibility:hidden">Buy Plot</button><br>
+        <span id="hint"></span>
+    </div>
+</div>
+
+<canvas id="sparecanvas" width="100" height="100">
+</canvas>
+<script type="text/javascript">
+"use strict";
+
+let ctx = gamecanvas.getContext("2d")
+ctx.fillRect(0,0,100,100)
+init()
+redraw()
+gamecanvas.addEventListener("click",click)
+
+</script>
+</body>
+</html>

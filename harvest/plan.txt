@@ -1,0 +1,58 @@
+plot 5x5? 10x10? 
+ - cellular automata style growth
+farm 10x10 plots
+ - copy and paste plots
+ - different terrain types? (soil/rocky)
+ - every farm has at least one soil plot and at least one rocky plot (ratio based on altitude)
+region 10x10 farms
+ - nutrients/environmental degradation?
+  - fertilizer?
+ - water
+  - being nearer to water allows things to grow better, but water can't support plants itself
+  - rocky terrain cares less about being near water?
+continent/face of cube
+ - terraforming
+  - move earth to change elavation of regions and whether they are water
+planet (cube)
+solar system
+ - planet building
+ - should distance from star matter?
+    - plants on planet at distance n from star only grow when time%n == 0
+ - moons?
+galaxy
+universe
+ - rocket equation?
+ -
+multiverse
+
+UI
+buttons:
+plant
+wait/grow
+harvest
+expand ("buy plot"/"buy farm"/"conquer region"/"go over the edge of the world"/"build a rocket"/"build a starship")
+
+zoom in
+zoom out
+
+
+generation:
+perlin noise heightmap
+
+
+efficiency:
+copy and paste means most things should be identical
+(data structures should be immutable once 'copied')
+make new objects for everything that gets zoomed in on
+
+(terraforming planets is a must once you get multi-system)
+any plot
+
+I can't see how resource depletion would work nicely
+
+appearance:
+plants are fractals
+smooth zooming
+rocky terrain should look less green even when plants are there (despite the fact it will be optimal to plant things more densely)
+things not yet purchased should be greyed out?
+
