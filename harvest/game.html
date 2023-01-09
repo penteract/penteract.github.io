@@ -1,7 +1,9 @@
+<!DOCTYPE html>
 <html>
 <head>
     <title>Harvest</title>
     <script type="text/javascript" src="import.js"> </script>
+    <script type="text/javascript" src="3d.js"> </script>
     <script type="text/javascript" src="automata.js"> </script>
     <script type="text/javascript" src="setup.js"> </script>
     <script type="text/javascript" src="input.js"> </script>
@@ -9,8 +11,8 @@
 /*canvas{
     scale: 0.5;
 }*/
-#sparecanvas{
-    display: none;
+.offscreen{
+    /*display: none;*/
 }
 
 /*
@@ -39,24 +41,53 @@ div#buttons{
     </div>
     <div id="buttons">
         Seeds: <span id="numseeds">0</span><br>
-        <button id="copybut" style="visibility:hidden" onclick="copy()">Save</button><br>
+        <button id="copybut" style="visibility:hidden" onclick="copy()">Record</button><br>
         <button id="zoomoutbut" style="visibility:hidden" onclick="zoomOut()">Zoom Out</button><br>
         <button id="zoominbut" style="visibility:hidden" onclick="zoomIn()">Zoom In (click)</button><br>
         <button id="pastebut" onclick="paste()">Plant</button><br>
         <button id="waitbut" style="visibility:hidden" onclick="wait()">Grow</button><br>
         <button id="harvestbut" style="visibility:hidden" onclick="harvest()">Harvest</button><br>
-        <button id="expandbut" style="visibility:hidden">Buy Plot</button><br>
-        <span id="hint"></span>
+        <button id="expandbut" style="visibility:hidden" onclick="expand()">Buy Plot</button><br>
+        <button id="terraformbut" style="visibility:hidden" onclick="tfm()">Start Terraforming</button><br>
+        <span id="hint"></span><br><br>
+        <span id="terraformMsg"></span>
     </div>
 </div>
 
-<canvas id="sparecanvas" width="100" height="100">
+<canvas class="offscreen" id="sparecanvas" width="500" height="500">
 </canvas>
+<div id="smallcanvases"><!--for drawing different layers-->
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+    <canvas class="offscreen" width="100" height="100"></canvas>
+</div>
 <script type="text/javascript">
 "use strict";
 
+let sparectx = sparecanvas.getContext("2d")
+smallcanvases.children
+
+let smallctxs = []
+for(let c of smallcanvases.children){
+    smallctxs.push(c.getContext("2d"))
+}
+//drawPlant(sparectx)
+
 let ctx = gamecanvas.getContext("2d")
-ctx.fillRect(0,0,100,100)
+/*ctx.fillStyle="brown"
+ctx.fillRect(10,10,980,980)
+let r = (Math.random()*1000)|0
+console.log(r)
+drawPlant(ctx,mkrng(r))*/
 init()
 redraw()
 gamecanvas.addEventListener("click",click)
