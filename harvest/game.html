@@ -12,44 +12,41 @@
     scale: 0.5;
 }*/
 .offscreen{
-    /*display: none;*/
+    display: none;
 }
 
 /*
-@media(min-width:1080px){
+@media(min-width:1150px){
 div#main{
   writing-mode: vertical-lr;
 }
 }
 div#buttons{
     writing-mode: initial;
+    padding-left: 5px;
 }*/
-#canvas{
-    float:left
+div#main{
+  display: inline-flex;
 }
-/*
-#buttons{
-    float:right;
-}*/
     </style>
 </head>
 <body>
 <div id="main">
-    <div id="canvas">
+    <div id="canvasdiv">
         <canvas id="gamecanvas" width="1000" height="1000">
     </canvas>
     </div>
     <div id="buttons">
         Seeds: <span id="numseeds">0</span><br>
-        <button id="copybut" style="visibility:hidden" onclick="copy()">Record</button><br>
+        <button id="copybut" style="visibility:hidden" onclick="copy()">Record / Copy</button><br>
         <button id="zoomoutbut" style="visibility:hidden" onclick="zoomOut()">Zoom Out</button><br>
-        <button id="zoominbut" style="visibility:hidden" onclick="zoomIn()">Zoom In (click)</button><br>
+        <!--<button id="zoominbut" style="visibility:hidden" onclick="zoomIn()">Zoom In (click)</button><br>-->
         <button id="pastebut" onclick="paste()">Plant</button><br>
         <button id="waitbut" style="visibility:hidden" onclick="wait()">Grow</button><br>
         <button id="harvestbut" style="visibility:hidden" onclick="harvest()">Harvest</button><br>
         <button id="expandbut" style="visibility:hidden" onclick="expand()">Buy Plot</button><br>
         <button id="terraformbut" style="visibility:hidden" onclick="tfm()">Start Terraforming</button><br>
-        <span id="hint"></span><br><br>
+        <div id="hint"></div><br><br>
         <span id="terraformMsg"></span>
     </div>
 </div>

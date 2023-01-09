@@ -3,23 +3,6 @@ var cursors = new Array(12);
 let animating;
 let terraforming;
 let recentlyterraformed;
-var hints = [
-    "Plant something",
-    "Zoom out to look at the plot",
-    "See what happens when plants grow",
-    "Collect them",
-    "You can click to zoom in on other plants",
-    "Spread the plants out to improve growth rate",
-    "Record a whole plot to speed up planting next time",
-    "Middle clicking can be easier than zooming in to plant",
-    "Save up to buy another plot",
-    "Plants don't grow as well in rocky soil ",
-    "Being nearer to water helps plants grow",//10
-    "You can now terraform to move large amounts of earth from one farm to another",
-    "Recording a region includes the terraforming state, so be careful when clicking 'plant'",
-    "Click outside the planet to see the hidden faces",
-    ""
-]
 
 const costFactor = 1;
 const expandCosts = {}// cost to reach depth n
@@ -27,13 +10,33 @@ expandCosts[10] = costFactor*PLOTSZ*PLOTSZ;
 expandCosts[9] = expandCosts[10]*FARMSZ*FARMSZ;
 expandCosts[8] = expandCosts[9]*REGSZ*REGSZ;
 expandCosts[7] = expandCosts[8]*6;
-const terraformcost = (expandCosts[8]/4)
+const terraformcost = (expandCosts[8]/10)
 
 const expandNames = {}
 expandNames[10] = ["Buy Plot","Buy Plots"]
 expandNames[9] = ["Buy Farm","Buy Farms"]
 expandNames[8] = ["Go over the edge of<br> the world","Go over the edges<br> of the world"]
-expandNames[7] = ["Build a rocket", "Build rockets"]
+expandNames[7] = ["Build a rocket (unimplemented)", "Build rockets(unimplemented)"]
+
+const endGame = expandCosts[7]*2
+
+var hints = [
+    "Plant something",
+    "Click 'Zoom Out' to look at the plot",
+    "See what happens when plants grow",
+    "Collect them",
+    "You can left click on other places to zoom in",
+    "Spread the plants out to improve growth rate",
+    "Record a whole plot with multiple plants in to speed up planting next time",
+    "Middle clicking can be easier than zooming in to plant/paste",
+    "Save up to buy another plot",
+    "Plants don't grow as well in rocky soil",
+    "Being nearer to water helps plants grow",//10
+    "You can now terraform to move large amounts of earth from one farm to another",
+    "Recording a region includes the terraforming state, so be careful when clicking 'plant'",
+    "Click outside the planet to see the hidden faces",
+    "Reach "+endGame+" plants to finish the game"
+]
 
 
 function fixcursor(depth){
@@ -50,12 +53,13 @@ function redraw(depth){
     fixcursor(depth)
     copybut.disabled = terraforming || cursor.depth>=11;
     zoomoutbut.disabled = terraforming || cursor.depth<=minDepth;
-    zoominbut.disabled = terraforming || cursor.depth>=11;
+    //zoominbut.disabled = terraforming || cursor.depth>=11;
     waitbut.disabled = terraforming
     pastebut.disabled = terraforming || saves[cursor.depth]===undefined || seeds<saves[cursor.depth].countPlants(cursor)
-    pastebut.innerHTML = terraforming || saves[cursor.depth]===undefined?"Plant":"Plant ("+saves[cursor.depth].countPlants(cursor)+")"
+    pastebut.innerHTML = terraforming || saves[cursor.depth]===undefined?"Plant/Paste":"Plant/Paste ("+saves[cursor.depth].countPlants(cursor)+")"
     harvestbut.disabled = terraforming || cursor.countPlants()==0n
     let numUnlock = (seeds / BigInt(expandCosts[nextUnlockDepth]))
+    if(nextUnlockDepth==7) numUnlock=0;
     expandbut.disabled = terraforming || numUnlock<1
     let maxUnlock = cursors[nextUnlockDepth-1].layerSize - nextUnlockLocation;
     if (numUnlock>maxUnlock) numUnlock=BigInt(maxUnlock)
@@ -66,9 +70,20 @@ function redraw(depth){
     terraformbut.innerHTML = terraforming?"Stop Terraforming":"Start Terraforming ("+terraformcost+")" 
     
     numseeds.innerHTML = seeds+""
-    hint.innerHTML = "Hint: "+hints[tutorial]
-    gamecanvas.width |= 0; // TODO: put this inside the call to draw, after preparation
-    return cursor.prepare().then(()=>cursor.draw(ctx));
+    if(tutorial<4){
+        hint.innerHTML = "Hint: "+hints[tutorial]
+    }
+    else{
+        let hinttxt = "Hints:<ul>"
+        for(let i=4;i<=tutorial;i++){
+            hinttxt += " <li>" + hints[i] + "</li>"
+        }
+        hint.innerHTML = hinttxt+"</ul>"
+    }
+    return cursor.prepare().then(()=>{
+        gamecanvas.width |= 0;
+        cursor.draw(ctx)
+    });
     //return cursor.draw(ctx)
 }
 
@@ -82,7 +97,7 @@ function skipTutorial(){
     copybut.style.visibility="visible"
     zoomoutbut.style.visibility="visible"
     harvestbut.style.visibility="visible"
-    zoominbut.style.visibility="visible"
+    //zoominbut.style.visibility="visible"
     expandbut.style.visibility="visible"
     terraformbut.style.visibility="visible"
     seeds+=1000n
@@ -173,6 +188,7 @@ function mousedown(e){
     let r = gamecanvas.getBoundingClientRect();
     let loc = cursor.getLocation((e.x - r.left) / r.width, (e.y - r.top) / r.width)
     lastDownLocs[e.button] = loc
+    if(loc!==undefined) e.preventDefault()
 }
 function mouseup(e){
     if (e.button>1) return;
@@ -180,6 +196,7 @@ function mouseup(e){
     if (downLoc==undefined) return;
     lastDownLocs[e.button] = undefined
     if(animating && !(terraforming&&e.button==0)) return;
+    e.preventDefault()
     let r = gamecanvas.getBoundingClientRect();
     let loc = cursor.getLocation((e.x - r.left) / r.width, (e.y - r.top) / r.width)
     if(loc==downLoc) click(e,loc);
@@ -223,6 +240,7 @@ function click(e,loc){
     if(e.button==1 && loc!==undefined){
         if (tutorial<7) return;
         if (terraforming || saves[cursor.depth+1]===undefined
+              || tutorial<4
               || seeds<saves[cursor.depth+1].countPlants(cursor.getChildren()[loc]))
               return;
         pLocation[cursor.depth+1] = loc
@@ -232,11 +250,12 @@ function click(e,loc){
     } 
     //console.log(loc)
     if (e.button==0 && loc!==undefined){
-        if (zoominbut.disabled || zoominbut.style.visibility=="hidden") return;
+        if (terraforming || cursor.depth>=11 ) return;
         if (tutorial==4 ){
             tutorial+=1
         }
         pLocation[cursor.depth+1] = loc
+        if(tutorial==13 && cursor.depth==7 && loc>2) {tutorial+=1}
         zoomIn()
     }
 }
@@ -267,6 +286,7 @@ function paste(dontdraw){
 }
 function wait(){
     if(animating) return;
+    let startPlants = map.countPlants()
     time+=1
     if (tutorial==2){
         tutorial+=1
@@ -277,13 +297,21 @@ function wait(){
         tutorial+=1
         expandbut.style.visibility="visible"
     }
-    redraw()
+    redraw().then(()=>{
+        if(map.countPlants()+seeds>=endGame){
+            doGameOver(map.countPlants() - startPlants, time);
+        }
+    })
 }
+function doGameOver(numplants, time){
+    alert("Congratulations, you completed the game!\nYou finised in "+time+" seasons, and were growing "+numplants+" plants per season by the end")
+}
+
+
 function harvest(dontdraw){
     if(animating) return;
     if (tutorial==3){
         tutorial+=1
-        zoominbut.style.visibility="visible"
     }
     map = map.clone()
     let c = map
