@@ -18,7 +18,7 @@ function rotz(theta,xyz){
     let c = Math.cos(theta)
     let s = Math.sin(theta)
     let [x,y,z] = xyz
-    return [x*c-y*s,y+x*s,z]
+    return [x*c-y*s,y*c+x*s,z]
 }
 
 const aaCubeCorners = [
@@ -50,7 +50,10 @@ const d45 = Math.PI/4
 const fRotations = {
     0:[-atr2,-d45,0],
     1:[-atr2,d45,0],
-    2:[2*d45-atr2,0,d45]
+    2:[2*d45-atr2,0,d45],
+    3:[-atr2,-d45*3,0],
+    4:[-atr2,d45*3,0],
+    5:[-2*d45-atr2,0,d45]
 }
 
 const cubeCorners = new Array(8)

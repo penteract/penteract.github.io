@@ -94,6 +94,8 @@ function init(reallyRandom){
     recentlyterraformed= false
 }
 
+const dummycanvas = {canvas:{},drawImage:(()=>{}), fillRect:(()=>{})}
+
 var LAYERS;
 class Map{
     layerSize=1
@@ -135,7 +137,7 @@ class Map{
     waitchild(ch,...args){
         return ch.wait(...args)
     }
-    // clone, assume parent will be changed
+    // make a clone (usually so that a part will be mutated)
     clone(){
         let newch = {}
         for(let k in this.getChildren()){
@@ -173,6 +175,11 @@ class Map{
             }
         }
         return this.harvested
+    }
+    async prepare(){
+        for(let k in this.getChildren()){
+            await this.getChildren()[k].draw(dummycanvas,this,k)
+        }
     }
     async draw(ctx,parent,k){
         let sz = ctx.canvas.width
@@ -260,6 +267,9 @@ class Plant extends Map{
             //ctx.fillRect(sz/10,sz/10,sz*8/10,sz*8/10)
         }
     }
+    mkChildren(){
+        return {}
+    }
     countPlants(){
         return BigInt(this.planted)
     }
@@ -340,8 +350,9 @@ class Plot extends Map{
 }
 let rPlot
 let sPlot
-const FARMSZ = 10
-const ALTITUDE_FACTOR = 4
+const FARMSZ = 15
+const maxAltitude = 16
+const ALTITUDE_FACTOR = ((FARMSZ*FARMSZ - 2) / maxAltitude) | 0
 class Farm extends Map{
     layerSize=FARMSZ*FARMSZ
     gridsz = FARMSZ
@@ -435,7 +446,7 @@ class Farm extends Map{
         return farms[this.altitude]
     }
 }
-const REGSZ = 12
+const REGSZ = 20
 const NOISESCALE = 4
 class Water extends Map{
     constructor(depth,altitude){
@@ -548,6 +559,12 @@ class Region extends Map{
         this.wdists=wdists
 
     }
+    async drawToSave(ctx,...args){
+        let sz = ctx.canvas.width
+        ctx.fillStyle="white"
+        ctx.fillRect(0,0,sz,sz)
+        await super.drawToSave(ctx,...args)
+    }
     /*draw(ctx){
         sz = ctx.canvas.width
         ctx.fillStyle = "green"
@@ -570,7 +587,6 @@ LAYERS[11] = Plant
 LAYERS[10] = Plot
 LAYERS[9] = Farm
 LAYERS[8] = Region
-const maxAltitude = 16
 let farms; // empty farms at each altitude
 let waters;
 
@@ -585,6 +601,8 @@ class Planet extends Map{
     }
     async drawToSave(ctx,parent,k){
         let sz = ctx.canvas.width
+        ctx.fillStyle="black"
+        ctx.fillRect(0,0,sz,sz)
         ctx.save()
         ctx.translate(sz/2,sz/2)
         ctx.scale(0.5,0.5)
@@ -607,6 +625,8 @@ class Planet extends Map{
     }
     async drawZoomed(t, ctx){
         let sz = ctx.canvas.width
+        ctx.fillStyle="black"
+        ctx.fillRect(0,0,sz,sz)
 
         let scale = Math.pow(0.5, 1-t)
         ctx.save()
@@ -616,29 +636,30 @@ class Planet extends Map{
         let nFace = pLocation[cursor.depth+1]
         let frots = fRotations[nFace].map(x=>x*t)
         let cb = newCube(frots)
+        let srt = cb.map((e,k)=>[e[2],k])
+        srt.sort((a,b)=>b[0]-a[0])
+        let front = srt[0][1]
+        for(let f =0;f<6;f++){
+            let crs = cornersOfFace[f];
+            if(front==crs[0] || front==crs[1] || front==crs[2] || front==crs[1]+crs[2]-crs[0]){
+                ctx.save()
+                ctx.transform(...faceMatrix(crs,cb, sz))
+                await this.getChildren()[f].draw(ctx,this,0)
+                ctx.restore()
 
-        ctx.save()
-        ctx.transform(...faceMatrix(cornersOfFace[0],cb, sz))
-        await this.getChildren()[0].draw(ctx,this,0)
-        ctx.restore()
-
-        ctx.save()
-        ctx.transform(...faceMatrix(cornersOfFace[1],cb, sz))
-        await this.getChildren()[1].draw(ctx,this,1)
-        ctx.restore()
-
-        ctx.save()
-        ctx.transform(...faceMatrix(cornersOfFace[2],cb, sz))
-        await this.getChildren()[2].draw(ctx,this,2)
-        ctx.restore()
+            }
+        }
         ctx.restore()
     }
     getLocation(x,y){
         x-=0.5
         y-=0.5
         let seg = (Math.atan2(x,y)*3/Math.PI + 6)|0
-        if(Math.sqrt(x*x+y*y)>0.5 ) return 3 + ((((5+seg)%6)/2) |0);
-        else return (((7-seg)%6)/2) |0 ;
+        let pos;
+        if(Math.sqrt(x*x+y*y)>0.4) pos =  3 + ((((5+seg)%6)/2) |0); // a hexagon is roughly a circle?
+        else pos = (((13-seg)%6)/2) |0 ;
+        if(nextUnlockDepth==this.depth+1 && nextUnlockLocation<=pos) return undefined;
+        return pos
     }
 }
 LAYERS[7] = Planet
