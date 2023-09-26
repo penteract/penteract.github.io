@@ -183,10 +183,14 @@ function grid(n,sty){
   return res + "</g>"
 }
 
-function colTree(col){ return drawMany(7,usq(col)) }
+function colTree(col){
+  return `<rect width=7 height=4 x=-3 y=0 stroke=${col} fill=none stroke-width=0.1 />`+
+    drawMany(7,usq(col))
+}
 
-grd = grid(2,"stroke:lightgray")+grid()
-trees = drawScaled(
+grd = grid(2,"stroke:#e8e8e8")+grid()
+trees = `<rect width=7 height=4 x=-3 y=0 stroke=blue fill=none stroke-width=0.075 />` +
+  drawScaled(
     drawScaled(colTree("red"),colTree("orange")),
     drawScaled(colTree("#d0d000"),colTree("green"))
   ) + drawMany(2,usq("blue"))
@@ -203,12 +207,10 @@ letters = mklet("B",0,2) +
 
 draw(grd + trees + letters)
 
-// drawMany(2,`<rect style="opacity:0.5;fill:blue" x=0 y=0 width=1 height=1 />`))
-
 </script>
 <p>The tree may be divided into 28 squares in a 7x4 grid so that the largest square in the tree exactly fills one square of the grid. The 4 copies described above are nicely aligned to a subdivision of the grid, allowing each square of the grid to be described in terms of its 4 corners, each of which is either full, empty, a triangle, or an overlapping combination of squares of the original grid and their rotations. This lets us construct a non-deterministic automaton describing the shape. For example, the cell labeled B has tl-transitions to the cells C and W, tr-transitions to D and X, bl-transitions to E and Y and br-transitions to the cells F and Z. The transitions to C,D,E and F come from the yellow subtree and those labeled W,X,Y and Z come from the orange subtree.</p>
 
-<p>As rotations can be multiples of 90°, we need 4 states needed for each of the 28 original cells. For example, the cell labeled Y has a tr-transition to a state corresponding to Z rotated 90° clockwise.  The transitions from rotations are straightforward given the transitions from the originals. This gives a nondeterministic automaton with 4x28+4+1=117 states (the initial 28, their rotations, 4 triangles and 1 full square). This can be transformed into a deterministic automaton with 2<sup>116</sup>+1 states, but fortunately not all of them are needed. Instead we can start from the 28 singleton sets representing squares of the grid and discover that ~10000 states are reachable from those, which can be reduced to ~1000 by accounting for rotations and reflections.</p>
+<p>As rotations can be multiples of 90°, we need 4 states for each of the 28 original cells. For example, the cell labeled Y has a tr-transition to a state corresponding to Z rotated 90° clockwise.  The transitions from rotations are straightforward given the transitions from the originals. This gives a nondeterministic automaton with 4x28+4+1=117 states (the initial 28, their rotations, 4 triangles and 1 full square). This can be transformed into a deterministic automaton with 2<sup>116</sup>+1 states, but fortunately not all of them are needed. Instead we can start from the 28 singleton sets representing squares of the grid and discover that ~10000 states are reachable from those, which can be reduced to ~1000 by accounting for rotations and reflections.</p>
 
 <p>This gives a system of linear equations for the area of the shape described by each state. This system of equations has exactly one solution.</p>
 
