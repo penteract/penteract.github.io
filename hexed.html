@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hexed</title>
+<style>
+/*
+@media(orientation:portrait){
+  svg{
+  transform:rotate(-90deg);
+  }
+}*/
+circle{
+  stroke:none;
+  fill:rgba(1,1,1,0);
+}
+circle.next:hover{
+  stroke:none;
+  fill:url(#hover);
+}
+circle.active{
+  fill:url(#active)
+}
+path{
+  stroke:black;
+  stroke-width:0.3;
+  stroke-linecap:round;
+}
+path.premove{
+  stroke:green;
+  stroke-width:0.5;
+}
+.right.e2_-1,.left.e2_-1,.right.e1_1,.left.e1_1,.right.e-1_2,.left.e-1_2,.right.e-2_1,.left.e-2_1,.right.e-1_-1,.left.e-1_-1,.right.e1_-2,.left.e1_-2{
+  stroke-width:1;
+}
+.left.new.e2_-1{stroke:url(#l2_-1);}
+.left.new.e1_1{stroke:url(#l1_1);}
+.left.new.e-1_2{stroke:url(#l-1_2);}
+.left.new.e-2_1{stroke:url(#l-2_1);}
+.left.new.e-1_-1{stroke:url(#l-1_-1);}
+.left.new.e1_-2{stroke:url(#l1_-2);}
+.right.new.e2_-1{stroke:url(#r2_-1);}
+.right.new.e1_1{stroke:url(#r1_1);}
+.right.new.e-1_2{stroke:url(#r-1_2);}
+.right.new.e-2_1{stroke:url(#r-2_1);}
+.right.new.e-1_-1{stroke:url(#r-1_-1);}
+.right.new.e1_-2{stroke:url(#r1_-2);}
+.left,.right{stroke:magenta;}
+svg{
+  position:fixed;
+  top:0px;
+  left:0px;
+  width: 100%;
+  height: 100%;
+  padding:3px;
+  box-sizing:border-box;
+}
+
+html,body{
+border:0px;
+padding:0px;
+margin:0px;
+}
+#menu{
+  position:fixed;
+  text-align:center;
+  height:100%;
+  width:100%;
+  transform:scale(200%);
+}
+#innermenu{
+  top:50%;
+  transform: translateY(-50%);
+  display:inline-block;
+  padding:10px;
+  background:lightblue;
+  max-width:50%;
+  position:relative;
+}
+.hidden{
+display:none;
+}
+</style>
+
+<script>
+"use strict";
+// General functions
+function vadd(v1,v2){
+  return [v1[0]+v2[0],v1[1]+v2[1]];
+}
+function vsub(v1,v2){
+  return [v1[0]-v2[0],v1[1]-v2[1]];
+}
+
+const SVGNS = "http://www.w3.org/2000/svg"
+
+// Hexagon stuff
+const hh = Math.sqrt(3)/2 // hex height
+const dirs = [[2,-1],[1,1],[-1,2],[-2,1],[-1,-1],[1,-2]]
+
+const server = "wss://tesseract.nfshost.com/connect/"
+</script>
+</head>
+
+
+<body>
+<svg id=svgel viewbox="-50 -43.30125 100 86.6025" width=100% height=100% >
+<defs>
+<radialGradient id="hover">
+  <stop offset="0%" stop-color="rgba(128,255,128,1)" />
+  <stop offset="100%" stop-color="rgba(128,255,128,0)" />
+</radialGradient>
+<radialGradient id="active">
+  <stop offset="0%" stop-color="rgba(128,128,255,1)" />
+  <stop offset="100%" stop-color="rgba(128,128,255,0)" />
+</radialGradient>
+<radialGradient id="activer">
+  <stop offset="0%" stop-color="rgba(255,128,128,1)" />
+  <stop offset="100%" stop-color="rgba(255,128,128,0)" />
+</radialGradient>
+<linearGradient id="l1_1" x1=0 x2=1 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-2_1" x1=1 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-1_2" x1=0 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-1_-1" x1=1 x2=0 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l2_-1" x1=0 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l1_-2" x1=1 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+
+<linearGradient id="r1_1" x1=0 x2=1 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-2_1" x1=1 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-1_2" x1=0 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-1_-1" x1=1 x2=0 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r2_-1" x1=0 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r1_-2" x1=1 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+</defs>
+</svg>
+<div id=menu>
+<div id=innermenu>
+<span id=msg>Welcome</span><br>
+New game: <button onclick="startGame(2)">local</button> <button onclick="lookForMPGame()" >multiplayer</button> <button disabled=true onclick='console.log("hi")'>computer</button>
+</div></div>
+</body>
+
+<script>
+"use strict";
+const reset = svgel.innerHTML
+let gv;
+let move, getPlayer, endGame;
+let turn, toClear;
+function startGame(N){
+menu.classList.add("hidden")
+svgel.innerHTML=reset
+const svgwidth = 100
+const svgheight = svgwidth*hh
+const maxvert = 1.5*N*2+2
+const unit = svgheight/(maxvert+1);
+function toPos([i,j]){
+  return [unit*(2*i+j)*hh/3, unit*j*1.5/3]
+}
+
+const verts = {}
+gv=verts
+let midElement= document.createElementNS(SVGNS,"g")
+svgel.appendChild(midElement);
+
+
+for(let i=-N;i<=N;i++) for(let j=-N;j<=N;j++) if (Math.abs(i+j)<=N){
+  for (let d of dirs.concat([[0,0]])){
+    let pos = vadd([i*3,j*3],d)
+    if (!(pos in verts)){
+      let v = document.createElementNS(SVGNS,"circle")
+      let [x,y] = toPos(pos)
+      v.setAttribute("cx", x)
+      v.setAttribute("cy", y)
+      v.setAttribute("r",unit/2)
+      //v.pos=pos
+      v.addEventListener("click",function(e){
+        console.log(moveTo(pos,getPlayer()))
+      })
+      svgel.appendChild(v);
+      verts[pos] = v
+    }
+  }
+}
+
+
+function mkEdge(v1,v2){
+  let [x1,y1] = toPos(v1)
+  let [x2,y2] = toPos(v2)
+  let e = document.createElementNS(SVGNS,"path")
+  e.setAttribute("d",`M ${x1} ${y1} L ${x2+0.00001} ${y2}`)// SVG bug in firefox with gradients and vertical lines
+  svgel.insertBefore(e,midElement)
+  return e
+}
+
+const edges = {}
+for (let v in verts){
+  v=v.split(",").map(x=>+x)
+  edges[v]={}
+  for(let d of dirs){
+    let n = vadd(v,d)
+    if(n in verts){
+      if (n in edges){
+        edges[v][n]=edges[n][v]
+      }
+      else{
+        let e = mkEdge(v,n)
+        let [x1,y1] = toPos(v)
+        let [x2,y2] = toPos(n)
+        edges[v][n] = e
+      }
+    }
+  }
+}
+
+let start = [1,-2]
+let positions = {
+"l":start,
+"r":start
+}
+let visited = {}
+visited[start] = true
+let nextmoves = {}
+function getNextLegalMoves(startpt){
+  return dirs.filter(d => (vadd(startpt,d) in verts) && !(vadd(startpt,d) in visited))
+}
+for(let p in positions){
+  nextmoves[p] = getNextLegalMoves(positions[p])
+}
+
+turn = "l"
+toClear = {"l":{},"r":{}}
+
+function addClassTmp(player,node,cls){
+  node.classList.add(cls)
+  if(!(cls in toClear[player])){
+    toClear[player][cls]=[]
+  }
+  toClear[player][cls].push(node)
+
+}
+getPlayer = function(){
+  return turn
+}
+
+const moveTo = function(dest,player){
+  //if (player===undefined) player=getPlayer()
+  let p = positions[player]
+  return move(vsub(dest,p),player)
+}
+
+move = function(direction,player){
+  //if (player===undefined) player=getPlayer()
+  if(!dirs.reduce((acc,d)=>(d==direction+"")||acc,false)){
+    return false;
+  }
+  if(turn!=player) {return false}
+  let oldpos = positions[player]
+  let newpos = vadd(oldpos,direction)
+  if(!(newpos in verts) || (newpos in visited)) {
+    return false
+  }
+  for (let k in toClear[player]){
+    for(let n of toClear[player][k]) n.classList.remove(k)
+  }
+  toClear[player]={}
+  visited[newpos]=true
+  let newPath = mkEdge(oldpos,newpos)
+  newPath.classList.add("e"+direction.join("_"))
+  newPath.classList.add(player=="l"?"left":"right")
+  addClassTmp(player,newPath,"new")
+
+  positions[player]=newpos
+  turn = (turn=="l"?"r":"l")
+  let mvs = getNextLegalMoves(positions[turn])
+  if(mvs.length===0){
+    endGame(player+" wins!")
+    return true
+  }
+  else if(turn==getPlayer()){
+    console.log(verts[positions[turn]])
+    addClassTmp(turn,verts[positions[turn]],"active")
+    for(let d of mvs){
+      addClassTmp(turn,verts[vadd(positions[turn],d)],"next")
+    }
+  }
+  return player
+}
+endGame = function(reason){
+    msg.innerText=reason;
+    menu.classList.remove("hidden")
+}
+
+move([-2,1],"l");
+move([1,1],"r")
+/*
+for(let d of dirs){
+  s=".r"+d.join("_")
+  s=s+"{stroke:url(#r"+d+");}"
+  console.log(s)
+}
+s=""
+for(let d of dirs){
+  s+=".r"+d.join("_")+","
+  s+=".l"+d.join("_")+","
+}
+console.log(s)*/
+
+}
+let hasPriority = (()=>turn==getPlayer())
+//startGame(3)
+const keys = {
+"E":[2,-1],
+"D":[1,1],
+"S":[-1,2],
+"A":[-2,1],
+"Q":[-1,-1],
+"W":[1,-2]}
+document.addEventListener("keydown",function(e){
+  let d = keys[e.key.toUpperCase()]
+  if(d){console.log(move(d,getPlayer()))}
+})
+</script>
+
+
+
+
+
+
+<script id=multiplayer>
+const GameSize = 3
+const N_JOIN = 11
+const N_WELCOME = 12
+const N_CATCHUP = 13
+const N_MOVE = 14
+const N_RESET = 17
+const N_CATCHUPDONE = 18
+
+let myType
+let ws,connected
+let welcomeTimeout
+let alone
+function setWelcomeTimeout(){
+  clearTimeout(welcomeTimeout)
+  welcomeTimeout = setTimeout(()=>{
+    if(myType==3){
+      myType = Math.random()>0.5?1:2;
+    }
+    welcomeState=126
+    if(alone){
+      msg.innerText="Waiting for opponent to arrive"
+    } else{
+      startMultiplayerGame(GameSize)
+    }
+  }, 3000)
+}
+
+function connect(tag){
+  if(connected) ws.close()
+  connected=false
+  ws = new WebSocket(server+tag)
+  ws.onopen = (x => {
+    if(x.target===ws){
+      console.log("connection started")
+      connected = true
+      alone=true
+
+      moveHistory = []
+      myType = 3/*
+      let c = params["col"]
+      if(c)c=c.toLowerCase()
+      if(c=="white") myType = 1
+      if(c=="black") myType = 2*/
+      ws.send(new Int8Array([N_JOIN,myType]))
+      welcomeState = 0
+      setWelcomeTimeout()
+      lastCatchup = 0
+    }
+    else{
+      x.target.close()
+    }
+  })
+  ws.onmessage = (x=>{
+    if(!connected || x.target!==ws){
+      x.target.close()
+      return;
+    }
+    //alone = false
+    console.log("received message", x.data)
+    x.data.arrayBuffer().then(x=>recieveMessage(new Int8Array(x)))
+  })
+  ws.onclose = (x=>{
+    console.log("connection closed")
+    if(x.target===ws){
+      connected=false
+      if(menu.classList.contains("hidden"))endGame("disconnected")
+    }
+  })
+  ws.onerror = (x=>console.log("connection error",x))
+}
+function recieveMessage(arr){
+  console.log(arr)
+  //return;
+  switch (arr[0]) {
+    case N_JOIN:
+      if(myType==3){
+        if(arr[1]==1 || arr[1]==2) myType&=~arr[1]
+        else myType = Math.random()>0.5?1:2;
+      }
+      ws.send(new Uint8Array([N_WELCOME,myType,welcomeState]))
+      if (welcomeState<124) welcomeState+=2
+      if(alone){
+        alone=false
+        startMultiplayerGame(GameSize)
+        if(welcomeState<126){
+          welcomeState=126
+          startMultiplayerGame(GameSize)
+          clearTimeout(welcomeTimeout)
+        }
+      }
+      break;
+    case N_WELCOME:
+      alone=false
+      if(welcomeState<126 && (arr[2]&-2)>=(welcomeState&-2)){
+        console.log(myType)
+        myType&=~arr[1]
+        console.log(myType)
+        if(myType==0){
+          return tryNextTag()
+        }
+      }
+      break;
+    case N_CATCHUP:
+      if(welcomeState<126 && !(welcomeState&1)){
+        setWelcomeTimeout()
+        if(arr[1]+arr[2]*256==lastCatchup+1){
+          recieveMessage(arr.slice(3))
+          lastCatchup+=1
+        }
+      }
+      break;
+    case N_CATCHUPDONE:
+      if(welcomeState<126) welcomeState|=1
+      break;
+    case N_MOVE:
+      if(welcomeState<126){
+        if(!alone && myType!=3){
+          welcomeState=126
+          startMultiplayerGame(GameSize)
+          clearTimeout(welcomeTimeout)
+        }else{
+          tryNextTag()
+          break;
+        }
+      }
+      move(arr.slice(1,3),(arr[3]==1)?"l":"r",true)
+      break;
+    case N_RESET:
+      if(confirm("do you want to reset?")){
+        oldReset()
+        moveHistory=[]
+      }
+      break;
+    default:
+      console.log("incomprehensible message",arr)
+  }
+}
+
+let tags
+function tryNextTag(){
+  clearTimeout(welcomeTimeout)
+  msg.innerText="Searching for multiplayer game"
+  if(t = tags.pop()){
+    connect(t)
+  }
+}
+
+function lookForMPGame(){
+  tags = []
+  for (let c of "1234567890qwertyuiopasdfghjklzxcvbnm"){
+    tags.push("hex"+c)
+  }
+  tryNextTag()
+}
+function startMultiplayerGame(N){
+  startGame(N)
+  getPlayer = () => (myType===1)?"l":"r"
+  let oldMove = move
+  move = function([di,dj],player,nosend){
+    if(!nosend && !hasPriority())return false;
+    let result
+    if (result=oldMove([di,dj],player) ){
+      moveHistory.push(new Int8Array([N_MOVE,di,dj, (player=="l")?1:2 ]))
+      if(ws && !nosend)ws.send(moveHistory[moveHistory.length-1])
+      //if(result===true){connected=false;ws.close();ws=undefined}
+      return result;
+    }
+    return false
+  }
+  let oldEndGame=endGame
+  endGame = function(reason){
+    oldEndGame(reason)
+    setTimeout(()=>{ws.close()}, 1)
+    connected=false
+  }
+  if(turn!=getPlayer()){// Fix the UI slightly
+      for (let k in toClear[turn]) if(k=="next" || k=="active"){
+        for(let n of toClear[turn][k]) n.classList.remove(k)
+      }
+  }
+}
+</script>
+
+
+
+
+
+
+
+<script id=premoves>
+
+function addPreMoves(){
+  let premoves = {"l":[],"r":[]}
+  let premovePos = {"l":positions["l"],"r":positions["r"]}
+  let oldMove = move
+  move = function(direction,player){
+    if(turn==player){
+      if ( oldMove(direction,player)){
+        premovePos[player] = positions[player]
+        while(premoves[turn].length){
+          if(! oldMove(premoves[turn].splice(0,1)[0], turn) ){
+            premoves[turn]=[]
+            premovePos[turn] = positions[turn]
+          }
+        }
+      }
+    }else{// try adding a premove
+      if(!dirs.reduce((acc,d)=>(d==direction+"")||acc,false)){
+        return false;
+      }
+      let oldpos = premovePos[player]
+      let newpos = vadd(oldpos,direction)
+      if(premoves[player].length && direction==vsub([0,0],premoves[player][premoves[player].length-1])){
+        premoves[player].pop()
+        premovePos[player]=newpos
+        edge[oldpos][newpos].classList.add("premove")
+      } else{
+        if(!(newpos in verts) || (newpos in visited)) {
+          return false
+        }
+        premovePos[player]=newpos
+        premoves[player].push(direction)
+        edge[oldpos][newpos].classList.add("premove")
+      }
+    }
+    if(getPlayer()!=turn){
+      let mvs = getNextLegalMoves(premovePos[getPlayer()])
+      //console.log(verts[positions[turn]])
+      //addClassTmp(turn,verts[positions[turn]],"active")
+      for(let d of mvs){
+        addClassTmp(turn,verts[vadd(positions[getPlayer()],d)],"next")
+      }
+    }
+  }
+}
+</script>
+</html>
