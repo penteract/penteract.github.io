@@ -179,8 +179,8 @@ New game: <button onclick="startGame(2)">local</button> <button onclick="lookFor
 "use strict";
 const reset = svgel.innerHTML
 let gv;
-let move, getPlayer, endGame;
-let turn, toClear;
+let move, moveTo, getPlayer, endGame;
+let turn, toClear , positions, addClassTmp,getNextLegalMoves,edges, verts,visited;
 function startGame(N){
 menu.classList.add("hidden")
 svgel.innerHTML=reset
@@ -192,7 +192,7 @@ function toPos([i,j]){
   return [unit*(2*i+j)*hh/3, unit*j*1.5/3]
 }
 
-const verts = {}
+verts = {}
 gv=verts
 let midElement= document.createElementNS(SVGNS,"g")
 svgel.appendChild(midElement);
@@ -227,7 +227,7 @@ function mkEdge(v1,v2){
   return e
 }
 
-const edges = {}
+edges = {}
 for (let v in verts){
   v=v.split(",").map(x=>+x)
   edges[v]={}
@@ -248,14 +248,14 @@ for (let v in verts){
 }
 
 let start = [1,-2]
-let positions = {
+positions = {
 "l":start,
 "r":start
 }
-let visited = {}
+visited = {}
 visited[start] = true
 let nextmoves = {}
-function getNextLegalMoves(startpt){
+getNextLegalMoves = function (startpt){
   return dirs.filter(d => (vadd(startpt,d) in verts) && !(vadd(startpt,d) in visited))
 }
 for(let p in positions){
@@ -265,7 +265,7 @@ for(let p in positions){
 turn = "l"
 toClear = {"l":{},"r":{}}
 
-function addClassTmp(player,node,cls){
+addClassTmp = function(player,node,cls){
   node.classList.add(cls)
   if(!(cls in toClear[player])){
     toClear[player][cls]=[]
@@ -277,7 +277,7 @@ getPlayer = function(){
   return turn
 }
 
-const moveTo = function(dest,player){
+moveTo = function(dest,player){
   //if (player===undefined) player=getPlayer()
   let p = positions[player]
   return move(vsub(dest,p),player)
@@ -312,7 +312,7 @@ move = function(direction,player){
     return true
   }
   else if(turn==getPlayer()){
-    console.log(verts[positions[turn]])
+    //console.log(verts[positions[turn]])
     addClassTmp(turn,verts[positions[turn]],"active")
     for(let d of mvs){
       addClassTmp(turn,verts[vadd(positions[turn],d)],"next")
@@ -456,9 +456,9 @@ function recieveMessage(arr){
     case N_WELCOME:
       alone=false
       if(welcomeState<126 && (arr[2]&-2)>=(welcomeState&-2)){
-        console.log(myType)
+        //console.log(myType)
         myType&=~arr[1]
-        console.log(myType)
+        //console.log(myType)
         if(myType==0){
           return tryNextTag()
         }
@@ -505,6 +505,7 @@ function tryNextTag(){
   clearTimeout(welcomeTimeout)
   msg.innerText="Searching for multiplayer game"
   if(t = tags.pop()){
+    console.log("connecting to tag: "+t)
     connect(t)
   }
 }
@@ -542,6 +543,7 @@ function startMultiplayerGame(N){
         for(let n of toClear[turn][k]) n.classList.remove(k)
       }
   }
+  addPreMoves()
 }
 </script>
 
@@ -555,14 +557,26 @@ function startMultiplayerGame(N){
 
 function addPreMoves(){
   let premoves = {"l":[],"r":[]}
+  let preEdges = {"l":[],"r":[]}
   let premovePos = {"l":positions["l"],"r":positions["r"]}
   let oldMove = move
-  move = function(direction,player){
+  let oldMoveTo = moveTo
+  moveTo = function(dest,player){
+    if(getPlayer()!=turn){
+      let p = premovePos[player]
+      return move(vsub(dest,p),player)
+    }
+    else{
+      oldMoveTo(dest,player)
+    }
+  }
+  move = function(direction,player,nosend){
     if(turn==player){
-      if ( oldMove(direction,player)){
+      if ( oldMove(direction,player,nosend)){
         premovePos[player] = positions[player]
         while(premoves[turn].length){
           if(! oldMove(premoves[turn].splice(0,1)[0], turn) ){
+            clearPremoves(turn)
             premoves[turn]=[]
             premovePos[turn] = positions[turn]
           }
@@ -574,28 +588,52 @@ function addPreMoves(){
       }
       let oldpos = premovePos[player]
       let newpos = vadd(oldpos,direction)
-      if(premoves[player].length && direction==vsub([0,0],premoves[player][premoves[player].length-1])){
+      if(premoves[player].length && direction+""==vsub([0,0],premoves[player][premoves[player].length-1])){
         premoves[player].pop()
         premovePos[player]=newpos
-        edge[oldpos][newpos].classList.add("premove")
+        edges[oldpos][newpos].classList.remove("premove")
       } else{
         if(!(newpos in verts) || (newpos in visited)) {
           return false
         }
         premovePos[player]=newpos
         premoves[player].push(direction)
-        edge[oldpos][newpos].classList.add("premove")
+        edges[oldpos][newpos].classList.add("premove")
+        preEdges[player].push(edges[oldpos][newpos])
       }
     }
     if(getPlayer()!=turn){
       let mvs = getNextLegalMoves(premovePos[getPlayer()])
       //console.log(verts[positions[turn]])
       //addClassTmp(turn,verts[positions[turn]],"active")
+      for (let k in toClear[turn]) if(k=="next" || k=="active"){
+        for(let n of toClear[turn][k]) n.classList.remove(k)
+      }
       for(let d of mvs){
-        addClassTmp(turn,verts[vadd(positions[getPlayer()],d)],"next")
+        addClassTmp(turn,verts[vadd(premovePos[getPlayer()],d)],"next")
       }
     }
   }
+  function clearPremoves(player){
+    premoves[player]=[]
+    premovePos[player]=positions[player]
+    for(let e of preEdges[player]){
+      e.classList.remove("premove")
+    }
+    preEdges[player]=[]
+  }
+  let localMove=move // Avoid undoing when playing a game without premoves
+  // this may prevent things from being garbage collected
+  document.addEventListener("keydown",function(e){
+    console.log(e,e.key)
+    premvs = premoves[getPlayer()]
+    if(e.key=="Backspace" && premvs.length){
+      localMove(vsub([0,0],premvs[premvs.length-1]), getPlayer())
+    }
+    if(e.key=="Escape" && premvs.length){
+      clearPremoves(getPlayer())
+    }
+  })
 }
 </script>
 </html>
