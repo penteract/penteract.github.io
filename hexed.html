@@ -9,6 +9,10 @@
   transform:rotate(-90deg);
   }
 }*/
+#multiplayerSearch *{
+  stroke:black;
+  /*fill:rgba(1,1,1,0);*/
+}
 circle{
   stroke:none;
   fill:rgba(1,1,1,0);
@@ -51,7 +55,9 @@ svg{
   left:0px;
   width: 100%;
   height: 100%;
-  padding:3px;
+  border:0px;
+  padding:0px;
+  margin:0px;
   box-sizing:border-box;
 }
 
@@ -79,6 +85,22 @@ margin:0px;
 .hidden{
 display:none;
 }
+table{
+display:inline-block;
+}
+#keyBindings{
+  text-anchor:middle;
+  font:4px sans-serif;
+}
+.key{
+  fill: lightgray;
+  stroke: darkgray;
+  stroke-width:0.5;
+}
+.changing{
+  fill: lightblue;
+  stroke: darkblue;
+}
 </style>
 
 <script>
@@ -103,7 +125,7 @@ const server = "wss://tesseract.nfshost.com/connect/"
 
 
 <body>
-<svg id=svgel viewbox="-50 -43.30125 100 86.6025" width=100% height=100% >
+<svg viewbox="-50.5 -43.80125 101 87.6025" width=100% height=100% >
 <defs>
 <radialGradient id="hover">
   <stop offset="0%" stop-color="rgba(128,255,128,1)" />
@@ -167,11 +189,45 @@ const server = "wss://tesseract.nfshost.com/connect/"
   <stop offset="100%" stop-color="red" />
 </linearGradient>
 </defs>
+<g id=multiplayerSearch class="hidden">
+<circle cx=-45 cy="-38" r=5></circle>
+<line x1=-48 y1=-34 x2=-54 y2=-26></line>
+</g>
+<g id=svgel></g>
+<g id=keyBindings>
+<text x="43.33333333333332" y="18.59401076758503">keys</text>
+<path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 23.09401076758503"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 25.980762113533157"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 34.64101615137754"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 25.980762113533157"></path>
+<rect class="key" x="45.833333333333336" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq2_-1"></rect><text id="key2_-1" x="48.333333333333336" y="27.480762113533157">E</text><rect class="key" x="45.833333333333336" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq1_1"></rect><text id="key1_1" x="48.333333333333336" y="33.254264805429415">D</text><rect class="key" x="40.83333333333332" y="32.14101615137754" rx="0.625" width="5" height="5" id="sq-1_2"></rect><text id="key-1_2" x="43.33333333333332" y="36.14101615137754">S</text><rect class="key" x="35.83333333333333" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq-2_1"></rect><text id="key-2_1" x="38.33333333333333" y="33.254264805429415">A</text><rect class="key" x="35.83333333333333" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq-1_-1"></rect><text id="key-1_-1" x="38.33333333333333" y="27.480762113533157">Q</text><rect class="key" x="40.83333333333332" y="20.59401076758503" rx="0.625" width="5" height="5" id="sq1_-2"></rect><text id="key1_-2" x="43.33333333333332" y="24.59401076758503">W</text>
+</g>
 </svg>
+
+
 <div id=menu>
 <div id=innermenu>
 <span id=msg>Welcome</span><br>
-New game: <button onclick="startGame(2)">local</button> <button onclick="lookForMPGame()" >multiplayer</button> <button onclick="startAIGame(2)">computer</button>
+New game: <br>
+<table>
+<tr><td>Board Size</td><td><select id="Size">
+<option value="1">1</option>
+<option value="2" selected=true>2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<!--disabled to avoid overlapping with controls<option value="5">5</option>-->
+</select></td></tr>
+<tr><td><button onclick="startGame(Size.value)">local</button></td><td></td></tr>
+<tr><td><button onclick="lookForMPGame(Size.value)" >multiplayer</button></td><td></td> </tr>
+<tr><td><button onclick="startAIGame(Size.value,AIdiff.value)">computer</button></td><td><select id="AIdiff">
+<option value="100">Easy</option>
+<option value="1000">Medium</option>
+<option value="10000">Hard</option>
+<option value="0.1s">0.1s</option>
+<option value="1s">1s</option>
+<option value="5s">5s</option>
+<option value="10s">10s</option>
+</select></td></tr>
+</table>
+
+
 </div></div>
 </body>
 
@@ -181,6 +237,8 @@ const reset = svgel.innerHTML
 let gv;
 let move, moveTo, getPlayer, endGame;
 let turn, toClear , positions, addClassTmp,getNextLegalMoves,edges, verts,visited;
+let drawKeys=false;
+
 function startGame(N){
 menu.classList.add("hidden")
 svgel.innerHTML=reset
@@ -217,6 +275,33 @@ for(let i=-N;i<=N;i++) for(let j=-N;j<=N;j++) if (Math.abs(i+j)<=N){
   }
 }
 
+
+ //(evaluated at N=4)
+if(drawKeys){
+let UIcen = [N*2,N*2+2]
+for(let c in keys){
+  let kp = vadd(UIcen,keys[c])
+  keyBindings.prepend(mkEdge(UIcen, kp))
+
+  let [x,y] = toPos(kp);
+  let key = document.createElementNS(SVGNS,"rect")
+  key.classList.add("key")
+  let sz=2.5
+  key.setAttribute("x",x-sz)
+  key.setAttribute("y",y-sz)
+  key.setAttribute("rx",sz/4)
+  key.setAttribute("width",2*sz)
+  key.setAttribute("height",2*sz)
+  keyBindings.append(key)
+  key.id="sq"+keys[c].join("_")
+  let tel = document.createElementNS(SVGNS,"text")
+  tel.id="key"+keys[c].join("_")
+  tel.innerHTML=c
+  keyBindings.append(tel)
+  tel.setAttribute("x",x)
+  tel.setAttribute("y",y+1.5)
+}
+}
 
 function mkEdge(v1,v2){
   let [x1,y1] = toPos(v1)
@@ -262,6 +347,7 @@ for(let p in positions){
   nextmoves[p] = getNextLegalMoves(positions[p])
 }
 
+let name={"l":"Blue","r":"Red"} // Cannonically, these are Eloise and Abelard
 turn = "l"
 toClear = {"l":{},"r":{}}
 
@@ -276,6 +362,7 @@ addClassTmp = function(player,node,cls){
 getPlayer = function(){
   return turn
 }
+
 
 moveTo = function(dest,player){
   //if (player===undefined) player=getPlayer()
@@ -308,7 +395,7 @@ move = function(direction,player){
   turn = (turn=="l"?"r":"l")
   let mvs = getNextLegalMoves(positions[turn])
   if(mvs.length===0){
-    endGame(player+" wins!")
+    endGame(name[player]+" wins!")
     return true
   }
   else if(turn==getPlayer()){
@@ -350,9 +437,54 @@ const keys = {
 "A":[-2,1],
 "Q":[-1,-1],
 "W":[1,-2]}
+const revmap={}
+let keyChange = undefined;
+if(!drawKeys){
+function setText(key,text){
+  key.innerHTML=text;
+}
+for(let k in keys){
+  let dir = keys[k]
+  revmap[dir] = k
+  let s = "sq"+dir.join("_")
+  let key = document.getElementById("key"+dir.join("_"))
+  let box = document.getElementById(s)
+  let chng = function(e){
+    let oldtxt = revmap[dir]
+    if(keyChange){keyChange()}
+    keyChange = function(newtxt){
+      box.classList.remove("changing")
+      if(newtxt!==undefined && newtxt!==oldtxt){
+        setText(key,newtxt)
+        if(keys[newtxt]){
+          setText(document.getElementById("key"+keys[newtxt].join("_")),"")
+          delete revmap[keys[newtxt]]
+        }
+        if(oldtxt) {delete keys[oldtxt]}
+        keys[newtxt]=dir
+        revmap[dir]=newtxt
+      }
+      keyChange=undefined
+    }
+    box.classList.add("changing")
+  }
+  box.addEventListener("click",chng)
+  key.addEventListener("click",chng)
+}
+}
+
 document.addEventListener("keydown",function(e){
-  let d = keys[e.key.toUpperCase()]
-  if(d){console.log(move(d,getPlayer()))}
+  if(keyChange){
+    // comparing to 2 rather than 1 in case this does something with
+    // non-BMP unicode characters. This now supports F9, but not F10
+    // I don't want it to handle Backspace and Escape because they're used by premoves
+    // and other control characters probably aren't intended
+    keyChange(e.key.length<=2?e.key.toUpperCase():undefined)
+  }
+  else{
+    let d = keys[e.key.toUpperCase()]
+    if(d){console.log(move(d,getPlayer()))}
+  }
 })
 </script>
 
@@ -362,31 +494,39 @@ document.addEventListener("keydown",function(e){
 
 
 <script id=multiplayer>
-const GameSize = 2
 const N_JOIN = 11
 const N_WELCOME = 12
-const N_CATCHUP = 13
-const N_MOVE = 14
-const N_RESET = 17
-const N_CATCHUPDONE = 18
+const N_MOVE = 13
+//const N_RESET = 17
+const N_REQUESTCATCHUP = 15
+const N_CATCHUP = 16
+const N_CATCHUPDONE = 17
 
+let preferredSize,agreedSize
 let myType
 let ws,connected
 let welcomeTimeout
 let alone
+let lastCatchup=undefined;
 function setWelcomeTimeout(){
   clearTimeout(welcomeTimeout)
   welcomeTimeout = setTimeout(()=>{
+    console.log("wa",welcomeState)
     if(myType==3){
       myType = Math.random()>0.5?1:2;
     }
-    welcomeState=126
+    if(lastCatchup===undefined) welcomeState=126
     if(alone){
-      msg.innerText="Waiting for opponent to arrive"
+      msg.innerHTML="Waiting for opponent to arrive<br>Start another while waiting?"
     } else{
-      startMultiplayerGame(GameSize)
+      startMultiplayerGame(agreedSize)
+      if(lastCatchup!==undefined){
+        getPlayer = () => (myType===1)?"l":"r"
+        ws.send(new Int8Array([N_REQUESTCATCHUP]))
+        console.log("wb",welcomeState)
+      }
     }
-  }, 3000)
+  }, 2000)
 }
 
 function connect(tag){
@@ -405,10 +545,10 @@ function connect(tag){
       if(c)c=c.toLowerCase()
       if(c=="white") myType = 1
       if(c=="black") myType = 2*/
-      ws.send(new Int8Array([N_JOIN,myType]))
+      ws.send(new Int8Array([N_JOIN,myType,preferredSize]))
       welcomeState = 0
       setWelcomeTimeout()
-      lastCatchup = 0
+      lastCatchup = undefined
     }
     else{
       x.target.close()
@@ -424,10 +564,14 @@ function connect(tag){
     x.data.arrayBuffer().then(x=>recieveMessage(new Int8Array(x)))
   })
   ws.onclose = (x=>{
-    console.log("connection closed")
+    console.log("connection closed",x)
     if(x.target===ws){
       connected=false
-      if(menu.classList.contains("hidden"))endGame("disconnected")
+      if(MPGameRunning)endGame("disconnected")
+      else{
+        msg.innerText = "Game search closed"
+        multiplayerSearch.classList.add("hidden")
+      }
     }
   })
   ws.onerror = (x=>console.log("connection error",x))
@@ -441,21 +585,29 @@ function recieveMessage(arr){
         if(arr[1]==1 || arr[1]==2) myType&=~arr[1]
         else myType = Math.random()>0.5?1:2;
       }
-      ws.send(new Uint8Array([N_WELCOME,myType,welcomeState]))
+      if(alone){agreedSize=Math.min(arr[2],agreedSize)}
+      if(!alone && welcomeState==126){
+        ws.send(new Uint8Array([N_WELCOME,myType,127,agreedSize]))
+      }else{
+        ws.send(new Uint8Array([N_WELCOME,myType,welcomeState,agreedSize]))
+      }
       if (welcomeState<124) welcomeState+=2
       if(alone){
         alone=false
-        startMultiplayerGame(GameSize)
+        startMultiplayerGame(agreedSize)
         if(welcomeState<126){
           welcomeState=126
-          startMultiplayerGame(GameSize)
           clearTimeout(welcomeTimeout)
         }
       }
       break;
     case N_WELCOME:
       alone=false
+      agreedSize=arr[3]
       if(welcomeState<126 && (arr[2]&-2)>=(welcomeState&-2)){
+        if(arr[2]==127){
+          lastCatchup=0;
+        }
         //console.log(myType)
         myType&=~arr[1]
         //console.log(myType)
@@ -464,23 +616,40 @@ function recieveMessage(arr){
         }
       }
       break;
+    case N_REQUESTCATCHUP:
+      console.log("test")
+      if(welcomeState>=126 && !alone){
+        (async function(){
+          for(let ix in moveHistory){
+            let a
+            console.log("sending",a = new Int8Array([N_CATCHUP,ix&127, ix>>7, ...moveHistory[ix]]),ws.bufferedAmount)
+            ws.send(a)
+            await new Promise(r => setTimeout(r, 100));
+          }
+          ws.send(new Int8Array([N_CATCHUPDONE,moveHistory.length&127,moveHistory.length>>7]))
+        })()
+      }
+      break;
     case N_CATCHUP:
-      if(welcomeState<126 && !(welcomeState&1)){
-        setWelcomeTimeout()
-        if(arr[1]+arr[2]*256==lastCatchup+1){
+      console.log(MPGameRunning,welcomeState,lastCatchup)
+      if(MPGameRunning && welcomeState<126){
+        if(arr[1]+arr[2]*128==lastCatchup){
           recieveMessage(arr.slice(3))
           lastCatchup+=1
         }
       }
       break;
     case N_CATCHUPDONE:
-      if(welcomeState<126) welcomeState|=1
+      if(MPGameRunning && welcomeState<126){
+        welcomeState=126
+        getPlayer = () => (myType===1)?"l":"r"
+      }
       break;
     case N_MOVE:
-      if(welcomeState<126){
+      if(welcomeState<126 && lastCatchup===undefined){
         if(!alone && myType!=3){
           welcomeState=126
-          startMultiplayerGame(GameSize)
+          startMultiplayerGame(agreedSize)
           clearTimeout(welcomeTimeout)
         }else{
           tryNextTag()
@@ -502,6 +671,8 @@ function recieveMessage(arr){
 
 let tags
 function tryNextTag(){
+  agreedSize = preferredSize;
+  multiplayerSearch.classList.remove("hidden")
   clearTimeout(welcomeTimeout)
   msg.innerText="Searching for multiplayer game"
   if(t = tags.pop()){
@@ -509,17 +680,22 @@ function tryNextTag(){
     connect(t)
   }else{
     msg.innerText="No free spaces for a multiplayer game"
+    multiplayerSearch.classList.add("hidden")
   }
 }
 
-function lookForMPGame(){
+function lookForMPGame(size){
   tags = []
   for (let c of "1234567890qwertyuiopasdfghjklzxcvbnm"){
     tags.push("hex"+c)
   }
+  preferredSize=size
   tryNextTag()
 }
+let MPGameRunning = false
 function startMultiplayerGame(N){
+  MPGameRunning = true
+  multiplayerSearch.classList.add("hidden")
   startGame(N)
   getPlayer = () => (myType===1)?"l":"r"
   let oldMove = move
@@ -536,6 +712,7 @@ function startMultiplayerGame(N){
   }
   let oldEndGame=endGame
   endGame = function(reason){
+    MPGameRunning = false
     oldEndGame(reason)
     setTimeout(()=>{ws.close()}, 1)
     connected=false
@@ -643,15 +820,44 @@ function addPreMoves(){
 
 <script id=ai>
 "use strict";
-//type tree : {directions:[wins,plays,newpl,subtree]} | {}
+//type tree : {directions:[plays,wins,newpl,subtree]} | {}
 
-function AI(positions,visited,player,tree,numrolls){
+
+function readTime(s){
+  if (typeof s == "string"){
+    if (s[s.length-1]=="s"){
+      let n = +s.slice(0,s.length-1)
+      return n*1000
+    }
+  }
+}
+async function AI(positions,visited,player,tree,numrolls){
   if (numrolls===undefined){
     numrolls=10000
   }
+  let t = readTime(numrolls)
   let s = mkState(positions,visited,player,tree)
-  for(let i=0;i<numrolls;i++){
-    roll(...s)
+  let startTime= performance.now();
+  let lastSleep=startTime;
+  //
+  if(t && t>0){
+    let tnow = 0;
+    while((tnow=performance.now()) - startTime < t){
+      if(tnow - lastSleep > 33){
+        await new Promise(requestAnimationFrame)
+        lastSleep=performance.now();
+      }
+      roll(...s)
+    }
+  }else{
+    numrolls = +numrolls
+    for(let i=0;i<numrolls;i++){
+      if(performance.now() - lastSleep > 33){
+        await new Promise(requestAnimationFrame)
+        lastSleep=performance.now();
+      }
+      roll(...s)
+    }
   }
   //console.log(s)
   return getBest(s)
@@ -692,8 +898,8 @@ function step(pl,ot,valid,tree){
   //if(depth%100)console.log(depth)
   if(depth>2000) throw Error("arg")
   if(!Object.keys(tree).length){
-    //for(let d of dirs.sort(()=>Math.random()-0.5)) {
-    for(let d of dirs) {
+    for(let d of dirs.sort(()=>Math.random()-0.5)) {
+    //for(let d of dirs) {
       let np = vadd(pl,d)
       if(valid[np]){
         tree[d]=[0,0,np,{}]
@@ -729,24 +935,30 @@ function step(pl,ot,valid,tree){
   tree[bestk][1]=wins+res
   return (1-res)
 }
-function startAIGame(N){
+function startAIGame(N,diff){
   startGame(N)
   let tree = {}
-  let oldMove = move
+  const oldMove = move
   getPlayer = ()=>"l"
   move = function(dir,player,nosend){
     let res = oldMove(dir,player,nosend)
     if(res && res!==true){
-      //console.log(dir,tree,tree[dir])
       tree = (tree[dir]??[])[3] ?? {}
-      //console.log(tree)
-      dir = AI(positions,visited,turn,tree).split(",").map(x=>+x)
-      //console.log(dir,tree[dir][3],tree)
-      tree = (tree[dir]??[])[3] ?? {}
-      //console.log(tree)
-      oldMove(dir,turn)
+      if(turn!==getPlayer()){
+        //console.log(dir,tree,tree[dir])
+        //console.log(tree)
+        let mv = move // save it so that the AI doesn't start playing moves in a multiplayer game
+        setTimeout(async ()=>{
+          let res = await AI(positions,visited,turn,tree,diff)
+          let dir = res.split(",").map(x=>+x)
+          //console.log(dir,tree[dir][3],tree)
+          if(mv===move) mv(dir,turn)
+        },0)
+      }
     }
+    return res
   }
+  addPreMoves()
 }
 </script>
 
