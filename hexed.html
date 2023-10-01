@@ -30,7 +30,7 @@ path{
   stroke-linecap:round;
 }
 path.premove{
-  stroke:green;
+  stroke:limegreen;
   stroke-width:0.5;
 }
 .right.e2_-1,.left.e2_-1,.right.e1_1,.left.e1_1,.right.e-1_2,.left.e-1_2,.right.e-2_1,.left.e-2_1,.right.e-1_-1,.left.e-1_-1,.right.e1_-2,.left.e1_-2{
@@ -100,6 +100,10 @@ display:inline-block;
 .changing{
   fill: lightblue;
   stroke: darkblue;
+}
+#premoveInfo{
+  font:3px sans-serif;
+  pointer-events: none;
 }
 </style>
 
@@ -199,21 +203,21 @@ const server = "wss://tesseract.nfshost.com/connect/"
 <path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 23.09401076758503"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 25.980762113533157"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 34.64101615137754"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 25.980762113533157"></path>
 <rect class="key" x="45.833333333333336" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq2_-1"></rect><text id="key2_-1" x="48.333333333333336" y="27.480762113533157">E</text><rect class="key" x="45.833333333333336" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq1_1"></rect><text id="key1_1" x="48.333333333333336" y="33.254264805429415">D</text><rect class="key" x="40.83333333333332" y="32.14101615137754" rx="0.625" width="5" height="5" id="sq-1_2"></rect><text id="key-1_2" x="43.33333333333332" y="36.14101615137754">S</text><rect class="key" x="35.83333333333333" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq-2_1"></rect><text id="key-2_1" x="38.33333333333333" y="33.254264805429415">A</text><rect class="key" x="35.83333333333333" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq-1_-1"></rect><text id="key-1_-1" x="38.33333333333333" y="27.480762113533157">Q</text><rect class="key" x="40.83333333333332" y="20.59401076758503" rx="0.625" width="5" height="5" id="sq1_-2"></rect><text id="key1_-2" x="43.33333333333332" y="24.59401076758503">W</text>
 </g>
+<g id=premoveInfo class=hidden>
+<text y=-37 x=26>Premoves can be</text>
+<text y=-33 x=26>undone by going</text>
+<text y=-29 x=33>backwards,</text>
+<text y=-25 x=33>Backspace</text>
+<text y=-21 x=35>or Escape</text>
+</g>
 </svg>
 
 
 <div id=menu>
 <div id=innermenu>
 <span id=msg>Welcome</span><br>
-New game: <br>
+Choose Opponent: <br>
 <table>
-<tr><td>Board Size</td><td><select id="Size">
-<option value="1">1</option>
-<option value="2" selected=true>2</option>
-<option value="3">3</option>
-<option value="4">4</option>
-<!--disabled to avoid overlapping with controls<option value="5">5</option>-->
-</select></td></tr>
 <tr><td><button onclick="startGame(Size.value)">local</button></td><td></td></tr>
 <tr><td><button onclick="lookForMPGame(Size.value)" >multiplayer</button></td><td></td> </tr>
 <tr><td><button onclick="startAIGame(Size.value,AIdiff.value)">computer</button></td><td><select id="AIdiff">
@@ -224,6 +228,13 @@ New game: <br>
 <option value="1s">1s</option>
 <option value="5s">5s</option>
 <option value="10s">10s</option>
+</select></td></tr>
+<tr><td>Board Size</td><td><select id="Size">
+<option value="1">1</option>
+<option value="2" selected=true>2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<!--disabled to avoid overlapping with controls<option value="5">5</option>-->
 </select></td></tr>
 </table>
 
@@ -241,6 +252,7 @@ let drawKeys=false;
 
 function startGame(N){
 menu.classList.add("hidden")
+premoveInfo.classList.add("hidden")
 svgel.innerHTML=reset
 const svgwidth = 100
 const svgheight = svgwidth*hh
@@ -501,6 +513,7 @@ const N_CATCHUP = 13
 const N_MOVE = 14
 const N_RESET = 17
 const N_CATCHUPDONE = 18
+const N_KICK = 19
 
 let preferredSize,agreedSize
 let myType
@@ -628,9 +641,12 @@ function recieveMessage(arr){
       }
       move(arr.slice(1,3),(arr[3]==1)?"l":"r",true)
       break;
+    case N_KICK:
+      ws.close()
+      break;
     case N_RESET:
       if(confirm("do you want to reset?")){
-        oldReset()
+        startMultiplayerGame(agreedSize)
         moveHistory=[]
       }
       break;
@@ -705,6 +721,7 @@ function startMultiplayerGame(N){
 <script id=premoves>
 
 function addPreMoves(){
+  premoveInfo.classList.remove("hidden")
   let premoves = {"l":[],"r":[]}
   let preEdges = {"l":[],"r":[]}
   let premovePos = {"l":positions["l"],"r":positions["r"]}
