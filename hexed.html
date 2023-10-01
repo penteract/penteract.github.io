@@ -494,37 +494,30 @@ document.addEventListener("keydown",function(e){
 
 
 <script id=multiplayer>
+const GameSize = 2
 const N_JOIN = 11
 const N_WELCOME = 12
-const N_MOVE = 13
-//const N_RESET = 17
-const N_REQUESTCATCHUP = 15
-const N_CATCHUP = 16
-const N_CATCHUPDONE = 17
+const N_CATCHUP = 13
+const N_MOVE = 14
+const N_RESET = 17
+const N_CATCHUPDONE = 18
 
 let preferredSize,agreedSize
 let myType
 let ws,connected
 let welcomeTimeout
 let alone
-let lastCatchup=undefined;
 function setWelcomeTimeout(){
   clearTimeout(welcomeTimeout)
   welcomeTimeout = setTimeout(()=>{
-    console.log("wa",welcomeState)
     if(myType==3){
       myType = Math.random()>0.5?1:2;
     }
-    if(lastCatchup===undefined) welcomeState=126
+    welcomeState=126
     if(alone){
       msg.innerHTML="Waiting for opponent to arrive<br>Start another while waiting?"
     } else{
       startMultiplayerGame(agreedSize)
-      if(lastCatchup!==undefined){
-        getPlayer = () => (myType===1)?"l":"r"
-        ws.send(new Int8Array([N_REQUESTCATCHUP]))
-        console.log("wb",welcomeState)
-      }
     }
   }, 2000)
 }
@@ -548,7 +541,7 @@ function connect(tag){
       ws.send(new Int8Array([N_JOIN,myType,preferredSize]))
       welcomeState = 0
       setWelcomeTimeout()
-      lastCatchup = undefined
+      lastCatchup = 0
     }
     else{
       x.target.close()
@@ -564,11 +557,11 @@ function connect(tag){
     x.data.arrayBuffer().then(x=>recieveMessage(new Int8Array(x)))
   })
   ws.onclose = (x=>{
-    console.log("connection closed",x)
+    console.log("connection closed")
     if(x.target===ws){
       connected=false
       if(MPGameRunning)endGame("disconnected")
-      else{
+      else if(!multiplayerSearch.classList.contains("hidden")){
         msg.innerText = "Game search closed"
         multiplayerSearch.classList.add("hidden")
       }
@@ -586,17 +579,14 @@ function recieveMessage(arr){
         else myType = Math.random()>0.5?1:2;
       }
       if(alone){agreedSize=Math.min(arr[2],agreedSize)}
-      if(!alone && welcomeState==126){
-        ws.send(new Uint8Array([N_WELCOME,myType,127,agreedSize]))
-      }else{
-        ws.send(new Uint8Array([N_WELCOME,myType,welcomeState,agreedSize]))
-      }
+      ws.send(new Uint8Array([N_WELCOME,myType,welcomeState,agreedSize]))
       if (welcomeState<124) welcomeState+=2
       if(alone){
         alone=false
         startMultiplayerGame(agreedSize)
         if(welcomeState<126){
           welcomeState=126
+          startMultiplayerGame(agreedSize)
           clearTimeout(welcomeTimeout)
         }
       }
@@ -605,9 +595,6 @@ function recieveMessage(arr){
       alone=false
       agreedSize=arr[3]
       if(welcomeState<126 && (arr[2]&-2)>=(welcomeState&-2)){
-        if(arr[2]==127){
-          lastCatchup=0;
-        }
         //console.log(myType)
         myType&=~arr[1]
         //console.log(myType)
@@ -616,37 +603,20 @@ function recieveMessage(arr){
         }
       }
       break;
-    case N_REQUESTCATCHUP:
-      console.log("test")
-      if(welcomeState>=126 && !alone){
-        (async function(){
-          for(let ix in moveHistory){
-            let a
-            console.log("sending",a = new Int8Array([N_CATCHUP,ix&127, ix>>7, ...moveHistory[ix]]),ws.bufferedAmount)
-            ws.send(a)
-            await new Promise(r => setTimeout(r, 100));
-          }
-          ws.send(new Int8Array([N_CATCHUPDONE,moveHistory.length&127,moveHistory.length>>7]))
-        })()
-      }
-      break;
     case N_CATCHUP:
-      console.log(MPGameRunning,welcomeState,lastCatchup)
-      if(MPGameRunning && welcomeState<126){
-        if(arr[1]+arr[2]*128==lastCatchup){
+      if(welcomeState<126 && !(welcomeState&1)){
+        setWelcomeTimeout()
+        if(arr[1]+arr[2]*256==lastCatchup+1){
           recieveMessage(arr.slice(3))
           lastCatchup+=1
         }
       }
       break;
     case N_CATCHUPDONE:
-      if(MPGameRunning && welcomeState<126){
-        welcomeState=126
-        getPlayer = () => (myType===1)?"l":"r"
-      }
+      if(welcomeState<126) welcomeState|=1
       break;
     case N_MOVE:
-      if(welcomeState<126 && lastCatchup===undefined){
+      if(welcomeState<126){
         if(!alone && myType!=3){
           welcomeState=126
           startMultiplayerGame(agreedSize)
@@ -750,6 +720,7 @@ function addPreMoves(){
     }
   }
   move = function(direction,player,nosend){
+    console.log("pmm")
     if(turn==player){
       if ( oldMove(direction,player,nosend)){
         premovePos[player] = positions[player]
