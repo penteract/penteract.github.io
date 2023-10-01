@@ -171,7 +171,7 @@ const server = "wss://tesseract.nfshost.com/connect/"
 <div id=menu>
 <div id=innermenu>
 <span id=msg>Welcome</span><br>
-New game: <button onclick="startGame(2)">local</button> <button onclick="lookForMPGame()" >multiplayer</button> <button disabled=true onclick='console.log("hi")'>computer</button>
+New game: <button onclick="startGame(2)">local</button> <button onclick="lookForMPGame()" >multiplayer</button> <button onclick="startAIGame(2)">computer</button>
 </div></div>
 </body>
 
@@ -507,6 +507,8 @@ function tryNextTag(){
   if(t = tags.pop()){
     console.log("connecting to tag: "+t)
     connect(t)
+  }else{
+    msg.innerText="No free spaces for a multiplayer game"
   }
 }
 
@@ -636,4 +638,116 @@ function addPreMoves(){
   })
 }
 </script>
+
+
+
+<script id=ai>
+"use strict";
+//type tree : {directions:[wins,plays,newpl,subtree]} | {}
+
+function AI(positions,visited,player,tree,numrolls){
+  if (numrolls===undefined){
+    numrolls=10000
+  }
+  let s = mkState(positions,visited,player,tree)
+  for(let i=0;i<numrolls;i++){
+    roll(...s)
+  }
+  //console.log(s)
+  return getBest(s)
+}
+
+function getBest(state){
+  let tree = state[3]
+  let bestk = undefined;
+  let bestVal = -Infinity
+  for (let k in tree){
+    let [plays,wins,npl,nextTree] = tree[k]
+    let val = wins/(plays+1)
+    if (val>bestVal){
+      bestVal=val
+      bestk=k
+    }
+  }
+  console.log(bestVal)
+  console.log(Object.keys(tree).reduce(((a,b)=>tree[b][0]+a),0))
+  return bestk;
+}
+
+function mkState(positions,visited,player,tree){
+  let valid = {}
+  for (let k in gv){valid[k] = !visited[k]}
+  let p = positions[player]
+  let op = positions[player=="l"?"r":"l"]
+  return [p,op,valid,tree]
+}
+let depth=0
+function roll(pl,ot,valid, tree){
+  depth=0
+  step(pl,ot,valid,tree)
+}
+function step(pl,ot,valid,tree){
+  depth+=1
+  //console.log(Object.keys(valid).length)
+  //if(depth%100)console.log(depth)
+  if(depth>2000) throw Error("arg")
+  if(!Object.keys(tree).length){
+    //for(let d of dirs.sort(()=>Math.random()-0.5)) {
+    for(let d of dirs) {
+      let np = vadd(pl,d)
+      if(valid[np]){
+        tree[d]=[0,0,np,{}]
+      }
+    }
+    if(!Object.keys(tree).length){
+      return 1
+    }
+  }
+  let bestk = undefined;
+  let bestVal = -Infinity
+  for (let k in tree){
+    let [plays,wins,npl,nextTree] = tree[k]
+    if (plays==0){
+      valid[npl]=false
+      let res = step(ot,npl,valid,nextTree)
+      valid[npl]=true
+      tree[k][0]+=1
+      tree[k][1]+=res
+      return (1-res)
+    }
+    let val = (wins/plays) - Math.log2(plays)
+    if(val>bestVal){
+      bestVal = val
+      bestk = k
+    }
+  }
+  let [plays,wins,npl,nextTree] = tree[bestk]
+  valid[npl]=false
+  let res = step(ot,npl,valid,nextTree)
+  valid[npl]=true
+  tree[bestk][0]=plays+1
+  tree[bestk][1]=wins+res
+  return (1-res)
+}
+function startAIGame(N){
+  startGame(N)
+  let tree = {}
+  let oldMove = move
+  getPlayer = ()=>"l"
+  move = function(dir,player,nosend){
+    let res = oldMove(dir,player,nosend)
+    if(res && res!==true){
+      //console.log(dir,tree,tree[dir])
+      tree = (tree[dir]??[])[3] ?? {}
+      //console.log(tree)
+      dir = AI(positions,visited,turn,tree).split(",").map(x=>+x)
+      //console.log(dir,tree[dir][3],tree)
+      tree = (tree[dir]??[])[3] ?? {}
+      //console.log(tree)
+      oldMove(dir,turn)
+    }
+  }
+}
+</script>
+
 </html>
