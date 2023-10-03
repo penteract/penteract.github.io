@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hexed</title>
+<style>
+/*
+@media(orientation:portrait){
+  svg{
+  transform:rotate(-90deg);
+  }
+}*/
+#multiplayerSearch *{
+  stroke:black;
+  /*fill:rgba(1,1,1,0);*/
+}
+circle{
+  stroke:none;
+  fill:rgba(1,1,1,0);
+}
+circle.next:hover{
+  stroke:none;
+  fill:url(#hover);
+}
+circle.active{
+  fill:url(#active)
+}
+path{
+  stroke:black;
+  stroke-width:0.3;
+  stroke-linecap:round;
+}
+path.premove{
+  stroke:limegreen;
+  stroke-width:0.5;
+}
+.right.e2_-1,.left.e2_-1,.right.e1_1,.left.e1_1,.right.e-1_2,.left.e-1_2,.right.e-2_1,.left.e-2_1,.right.e-1_-1,.left.e-1_-1,.right.e1_-2,.left.e1_-2{
+  stroke-width:1;
+}
+.left.new.e2_-1{stroke:url(#l2_-1);}
+.left.new.e1_1{stroke:url(#l1_1);}
+.left.new.e-1_2{stroke:url(#l-1_2);}
+.left.new.e-2_1{stroke:url(#l-2_1);}
+.left.new.e-1_-1{stroke:url(#l-1_-1);}
+.left.new.e1_-2{stroke:url(#l1_-2);}
+.right.new.e2_-1{stroke:url(#r2_-1);}
+.right.new.e1_1{stroke:url(#r1_1);}
+.right.new.e-1_2{stroke:url(#r-1_2);}
+.right.new.e-2_1{stroke:url(#r-2_1);}
+.right.new.e-1_-1{stroke:url(#r-1_-1);}
+.right.new.e1_-2{stroke:url(#r1_-2);}
+.left,.right{stroke:magenta;}
+svg{
+  position:fixed;
+  top:0px;
+  left:0px;
+  width: 100%;
+  height: 100%;
+  border:0px;
+  padding:0px;
+  margin:0px;
+  box-sizing:border-box;
+}
+
+html,body{
+border:0px;
+padding:0px;
+margin:0px;
+}
+#menu{
+  position:fixed;
+  text-align:center;
+  height:100%;
+  width:100%;
+  transform:scale(250%);
+}
+#innermenu{
+  top:50%;
+  transform: translateY(-50%);
+  display:inline-block;
+  padding:10px;
+  background:lightblue;
+  max-width:40%;
+  position:relative;
+}
+.hidden{
+display:none;
+}
+table{
+display:inline-block;
+}
+#keyBindings{
+  text-anchor:middle;
+  font:4px sans-serif;
+}
+.key{
+  fill: lightgray;
+  stroke: darkgray;
+  stroke-width:0.5;
+}
+.changing{
+  fill: lightblue;
+  stroke: darkblue;
+}
+#premoveInfo{
+  font:3px sans-serif;
+  pointer-events: none;
+}
+</style>
+
+<script>
+"use strict";
+// General functions
+function vadd(v1,v2){
+  return [v1[0]+v2[0],v1[1]+v2[1]];
+}
+function vsub(v1,v2){
+  return [v1[0]-v2[0],v1[1]-v2[1]];
+}
+
+const SVGNS = "http://www.w3.org/2000/svg"
+
+// Hexagon stuff
+const hh = Math.sqrt(3)/2 // hex height
+const dirs = [[2,-1],[1,1],[-1,2],[-2,1],[-1,-1],[1,-2]]
+
+const server = "wss://tesseract.nfshost.com/connect/"
+</script>
+</head>
+
+
+<body>
+<svg viewbox="-50.5 -43.80125 101 87.6025" width=100% height=100% >
+<defs>
+<radialGradient id="hover">
+  <stop offset="0%" stop-color="rgba(128,255,128,1)" />
+  <stop offset="100%" stop-color="rgba(128,255,128,0)" />
+</radialGradient>
+<radialGradient id="active">
+  <stop offset="0%" stop-color="rgba(128,128,255,1)" />
+  <stop offset="100%" stop-color="rgba(128,128,255,0)" />
+</radialGradient>
+<radialGradient id="activer">
+  <stop offset="0%" stop-color="rgba(255,128,128,1)" />
+  <stop offset="100%" stop-color="rgba(255,128,128,0)" />
+</radialGradient>
+<linearGradient id="l1_1" x1=0 x2=1 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-2_1" x1=1 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-1_2" x1=0 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l-1_-1" x1=1 x2=0 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l2_-1" x1=0 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+<linearGradient id="l1_-2" x1=1 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="blue" />
+</linearGradient>
+
+<linearGradient id="r1_1" x1=0 x2=1 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-2_1" x1=1 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-1_2" x1=0 x2=0 y1=0 y2=1>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r-1_-1" x1=1 x2=0 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r2_-1" x1=0 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+<linearGradient id="r1_-2" x1=1 x2=1 y1=1 y2=0>
+  <stop offset="0%" stop-color="magenta" />
+  <stop offset="100%" stop-color="red" />
+</linearGradient>
+</defs>
+<g id=multiplayerSearch class="hidden">
+<circle cx=-45 cy="-38" r=5></circle>
+<line x1=-48 y1=-34 x2=-54 y2=-26></line>
+</g>
+<g id=svgel></g>
+<g id=keyBindings>
+<text x="43.33333333333332" y="18.59401076758503">keys</text>
+<path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 23.09401076758503"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 25.980762113533157"></path><path d="M 43.33333333333332 28.867513459481287 L 38.33334333333333 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 43.333343333333325 34.64101615137754"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 31.754264805429415"></path><path d="M 43.33333333333332 28.867513459481287 L 48.33334333333334 25.980762113533157"></path>
+<rect class="key" x="45.833333333333336" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq2_-1"></rect><text id="key2_-1" x="48.333333333333336" y="27.480762113533157">E</text><rect class="key" x="45.833333333333336" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq1_1"></rect><text id="key1_1" x="48.333333333333336" y="33.254264805429415">D</text><rect class="key" x="40.83333333333332" y="32.14101615137754" rx="0.625" width="5" height="5" id="sq-1_2"></rect><text id="key-1_2" x="43.33333333333332" y="36.14101615137754">S</text><rect class="key" x="35.83333333333333" y="29.254264805429415" rx="0.625" width="5" height="5" id="sq-2_1"></rect><text id="key-2_1" x="38.33333333333333" y="33.254264805429415">A</text><rect class="key" x="35.83333333333333" y="23.480762113533157" rx="0.625" width="5" height="5" id="sq-1_-1"></rect><text id="key-1_-1" x="38.33333333333333" y="27.480762113533157">Q</text><rect class="key" x="40.83333333333332" y="20.59401076758503" rx="0.625" width="5" height="5" id="sq1_-2"></rect><text id="key1_-2" x="43.33333333333332" y="24.59401076758503">W</text>
+</g>
+<g id=premoveInfo class=hidden>
+<text y=-37 x=26>Premoves can be</text>
+<text y=-33 x=26>undone by going</text>
+<text y=-29 x=33>backwards,</text>
+<text y=-25 x=33>Backspace</text>
+<text y=-21 x=35>or Escape</text>
+</g>
+</svg>
+
+
+<div id=menu>
+<div id=innermenu>
+<span id=msg>Welcome</span><br>
+Choose Opponent: <br>
+<table>
+<!--<tr><td><button onclick="beep()">beep</button></td><td></td></tr>-->
+<tr><td><button onclick="startGame(Size.value)">local</button></td><td></td></tr>
+<tr><td><button onclick="lookForMPGame(Size.value)" >online</button></td><td></td> </tr>
+<tr><td><button onclick="startAIGame(Size.value,AIdiff.value)">computer</button></td><td><select id="AIdiff">
+<option value="100">Easy</option>
+<option value="1000">Medium</option>
+<option value="10000">Hard</option>
+<option value="0.1s">0.1s</option>
+<option value="1s">1s</option>
+<option value="5s">5s</option>
+<option value="10s">10s</option>
+</select></td></tr>
+<tr><td>Board Size</td><td><select id="Size">
+<option value="1">1</option>
+<option value="2" selected=true>2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<!--disabled to avoid overlapping with controls<option value="5">5</option>-->
+</select></td></tr>
+</table>
+
+
+</div></div>
+</body>
+
+<script>
+"use strict";
+
+let beep = ()=>{}
+let audioCtx;
+if (window.OfflineAudioContext){
+  const offlineCtx = new OfflineAudioContext(2, 44100 * 0.1, 44100);
+  let o = offlineCtx.createOscillator()
+  let g = offlineCtx.createGain();
+  o.frequency.value=800
+  o.start(0)
+  o.stop(0.1)
+  let volume = g.gain
+  volume.setValueAtTime(0,0)
+  volume.linearRampToValueAtTime(0.6,.003)
+  volume.linearRampToValueAtTime(0,.1)
+  o.connect(g).connect(offlineCtx.destination);
+  offlineCtx.startRendering().then((beepBuffer)=>
+    beep = function() {
+      if(!audioCtx) {audioCtx = new AudioContext();}
+      //else if(audioCtx.state=="suspended"){audioCtx.resume()}
+      const song = new AudioBufferSourceNode(audioCtx, {
+        buffer: beepBuffer,
+      });
+      song.connect(audioCtx.destination);
+      song.start();
+    })
+}
+
+const reset = svgel.innerHTML
+let gv;
+let move, moveTo, getPlayer, endGame;
+let turn, toClear , positions, addClassTmp,getNextLegalMoves,edges, verts,visited;
+let drawKeys=false;
+
+function startGame(N){
+menu.classList.add("hidden")
+premoveInfo.classList.add("hidden")
+svgel.innerHTML=reset
+const svgwidth = 100
+const svgheight = svgwidth*hh
+const maxvert = 1.5*N*2+2
+const unit = svgheight/(maxvert+1);
+function toPos([i,j]){
+  return [unit*(2*i+j)*hh/3, unit*j*1.5/3]
+}
+
+verts = {}
+gv=verts
+let midElement= document.createElementNS(SVGNS,"g")
+svgel.appendChild(midElement);
+
+
+for(let i=-N;i<=N;i++) for(let j=-N;j<=N;j++) if (Math.abs(i+j)<=N){
+  for (let d of dirs.concat([[0,0]])){
+    let pos = vadd([i*3,j*3],d)
+    if (!(pos in verts)){
+      let v = document.createElementNS(SVGNS,"circle")
+      let [x,y] = toPos(pos)
+      v.setAttribute("cx", x)
+      v.setAttribute("cy", y)
+      v.setAttribute("r",unit/2)
+      //v.pos=pos
+      v.addEventListener("click",function(e){
+        console.log(moveTo(pos,getPlayer()))
+      })
+      svgel.appendChild(v);
+      verts[pos] = v
+    }
+  }
+}
+
+
+ //(evaluated at N=4)
+if(drawKeys){
+let UIcen = [N*2,N*2+2]
+for(let c in keys){
+  let kp = vadd(UIcen,keys[c])
+  keyBindings.prepend(mkEdge(UIcen, kp))
+
+  let [x,y] = toPos(kp);
+  let key = document.createElementNS(SVGNS,"rect")
+  key.classList.add("key")
+  let sz=2.5
+  key.setAttribute("x",x-sz)
+  key.setAttribute("y",y-sz)
+  key.setAttribute("rx",sz/4)
+  key.setAttribute("width",2*sz)
+  key.setAttribute("height",2*sz)
+  keyBindings.append(key)
+  key.id="sq"+keys[c].join("_")
+  let tel = document.createElementNS(SVGNS,"text")
+  tel.id="key"+keys[c].join("_")
+  tel.innerHTML=c
+  keyBindings.append(tel)
+  tel.setAttribute("x",x)
+  tel.setAttribute("y",y+1.5)
+}
+}
+
+function mkEdge(v1,v2){
+  let [x1,y1] = toPos(v1)
+  let [x2,y2] = toPos(v2)
+  let e = document.createElementNS(SVGNS,"path")
+  e.setAttribute("d",`M ${x1} ${y1} L ${x2+0.00001} ${y2}`)// SVG bug in firefox with gradients and vertical lines
+  svgel.insertBefore(e,midElement)
+  return e
+}
+
+edges = {}
+for (let v in verts){
+  v=v.split(",").map(x=>+x)
+  edges[v]={}
+  for(let d of dirs){
+    let n = vadd(v,d)
+    if(n in verts){
+      if (n in edges){
+        edges[v][n]=edges[n][v]
+      }
+      else{
+        let e = mkEdge(v,n)
+        let [x1,y1] = toPos(v)
+        let [x2,y2] = toPos(n)
+        edges[v][n] = e
+      }
+    }
+  }
+}
+
+let start = [1,-2]
+positions = {
+"l":start,
+"r":start
+}
+visited = {}
+visited[start] = true
+let nextmoves = {}
+getNextLegalMoves = function (startpt){
+  return dirs.filter(d => (vadd(startpt,d) in verts) && !(vadd(startpt,d) in visited))
+}
+for(let p in positions){
+  nextmoves[p] = getNextLegalMoves(positions[p])
+}
+
+let name={"l":"Blue","r":"Red"} // Cannonically, these are Eloise and Abelard
+turn = "l"
+toClear = {"l":{},"r":{}}
+
+addClassTmp = function(player,node,cls){
+  node.classList.add(cls)
+  if(!(cls in toClear[player])){
+    toClear[player][cls]=[]
+  }
+  toClear[player][cls].push(node)
+
+}
+getPlayer = function(){
+  return turn
+}
+
+
+moveTo = function(dest,player){
+  //if (player===undefined) player=getPlayer()
+  let p = positions[player]
+  return move(vsub(dest,p),player)
+}
+
+move = function(direction,player){
+  //if (player===undefined) player=getPlayer()
+  if(!dirs.reduce((acc,d)=>(d==direction+"")||acc,false)){
+    return false;
+  }
+  if(turn!=player) {return false}
+  let oldpos = positions[player]
+  let newpos = vadd(oldpos,direction)
+  if(!(newpos in verts) || (newpos in visited)) {
+    return false
+  }
+  for (let k in toClear[player]){
+    for(let n of toClear[player][k]) n.classList.remove(k)
+  }
+  toClear[player]={}
+  visited[newpos]=true
+  let newPath = mkEdge(oldpos,newpos)
+  newPath.classList.add("e"+direction.join("_"))
+  newPath.classList.add(player=="l"?"left":"right")
+  addClassTmp(player,newPath,"new")
+
+  positions[player]=newpos
+  turn = (turn=="l"?"r":"l")
+  let mvs = getNextLegalMoves(positions[turn])
+  if(mvs.length===0){
+    endGame(name[player]+" wins!")
+    return true
+  }
+  else if(turn==getPlayer()){
+    //console.log(verts[positions[turn]])
+    addClassTmp(turn,verts[positions[turn]],"active")
+    for(let d of mvs){
+      addClassTmp(turn,verts[vadd(positions[turn],d)],"next")
+    }
+  }
+  return player
+}
+endGame = function(reason){
+    msg.innerText=reason;
+    menu.classList.remove("hidden")
+}
+
+move([-2,1],"l");
+move([1,1],"r")
+/*
+for(let d of dirs){
+  s=".r"+d.join("_")
+  s=s+"{stroke:url(#r"+d+");}"
+  console.log(s)
+}
+s=""
+for(let d of dirs){
+  s+=".r"+d.join("_")+","
+  s+=".l"+d.join("_")+","
+}
+console.log(s)*/
+
+}
+let hasPriority = (()=>turn==getPlayer())
+//startGame(3)
+const keys = {
+"E":[2,-1],
+"D":[1,1],
+"S":[-1,2],
+"A":[-2,1],
+"Q":[-1,-1],
+"W":[1,-2]}
+const revmap={}
+let keyChange = undefined;
+if(!drawKeys){
+function setText(key,text){
+  key.innerHTML=text;
+}
+for(let k in keys){
+  let dir = keys[k]
+  revmap[dir] = k
+  let s = "sq"+dir.join("_")
+  let key = document.getElementById("key"+dir.join("_"))
+  let box = document.getElementById(s)
+  let chng = function(e){
+    let oldtxt = revmap[dir]
+    if(keyChange){keyChange()}
+    keyChange = function(newtxt){
+      box.classList.remove("changing")
+      if(newtxt!==undefined && newtxt!==oldtxt){
+        setText(key,newtxt)
+        if(keys[newtxt]){
+          setText(document.getElementById("key"+keys[newtxt].join("_")),"")
+          delete revmap[keys[newtxt]]
+        }
+        if(oldtxt) {delete keys[oldtxt]}
+        keys[newtxt]=dir
+        revmap[dir]=newtxt
+      }
+      keyChange=undefined
+    }
+    box.classList.add("changing")
+  }
+  box.addEventListener("click",chng)
+  key.addEventListener("click",chng)
+}
+}
+
+document.addEventListener("keydown",function(e){
+  if(keyChange){
+    // comparing to 2 rather than 1 in case this does something with
+    // non-BMP unicode characters. This now supports F9, but not F10
+    // I don't want it to handle Backspace and Escape because they're used by premoves
+    // and other control characters probably aren't intended
+    keyChange(e.key.length<=2?e.key.toUpperCase():undefined)
+  }
+  else{
+    let d = keys[e.key.toUpperCase()]
+    if(d){console.log(move(d,getPlayer()))}
+  }
+})
+</script>
+
+
+
+
+
+
+<script id=multiplayer>
+const GameSize = 2
+const N_JOIN = 11
+const N_WELCOME = 12
+const N_CATCHUP = 13
+const N_MOVE = 14
+const N_RESET = 17
+const N_CATCHUPDONE = 18
+const N_KICK = 19
+
+let preferredSize,agreedSize
+let myType
+let ws,connected
+let welcomeTimeout
+let alone
+function setWelcomeTimeout(){
+  clearTimeout(welcomeTimeout)
+  welcomeTimeout = setTimeout(()=>{
+    if(myType==3){
+      myType = Math.random()>0.5?1:2;
+    }
+    welcomeState=126
+    if(alone){
+      msg.innerHTML="Waiting for opponent to arrive<br>Start another while waiting?"
+    } else{
+      startMultiplayerGame(agreedSize)
+    }
+  }, 2000)
+}
+let hasfocus = true
+window.addEventListener('focus', function (event) {
+    hasfocus=true
+});
+
+window.addEventListener('blur', function (event) {
+    hasfocus=false
+});
+
+function connect(tag){
+  if(connected) ws.close()
+  connected=false
+  ws = new WebSocket(server+tag)
+  ws.onopen = (x => {
+    if(x.target===ws){
+      console.log("connection started")
+      connected = true
+      alone=true
+
+      moveHistory = []
+      myType = 3/*
+      let c = params["col"]
+      if(c)c=c.toLowerCase()
+      if(c=="white") myType = 1
+      if(c=="black") myType = 2*/
+      ws.send(new Int8Array([N_JOIN,myType,preferredSize]))
+      welcomeState = 0
+      setWelcomeTimeout()
+      lastCatchup = 0
+    }
+    else{
+      x.target.close()
+    }
+  })
+  ws.onmessage = (x=>{
+    if(!connected || x.target!==ws){
+      x.target.close()
+      return;
+    }
+    //alone = false
+    console.log("received message", x.data)
+    x.data.arrayBuffer().then(x=>recieveMessage(new Int8Array(x)))
+  })
+  ws.onclose = (x=>{
+    console.log("connection closed",x)
+    if(x.target===ws){
+      connected=false
+      if(MPGameRunning)endGame("disconnected")
+      else if(!multiplayerSearch.classList.contains("hidden")){
+        if(Notification.permission=="granted" ){
+          lookForMPGame(preferredSize)
+        }
+        else{
+          msg.innerText = "Game search closed"
+          multiplayerSearch.classList.add("hidden")
+        }
+      }
+    }
+  })
+  ws.onerror = (x=>console.log("connection error",x))
+}
+function recieveMessage(arr){
+  console.log(arr)
+  //return;
+  switch (arr[0]) {
+    case N_JOIN:
+      if(myType==3){
+        if(arr[1]==1 || arr[1]==2) myType&=~arr[1]
+        else myType = Math.random()>0.5?1:2;
+      }
+      if(alone){agreedSize=Math.min(arr[2],agreedSize)}
+      ws.send(new Uint8Array([N_WELCOME,myType,welcomeState,agreedSize]))
+      if (welcomeState<124) welcomeState+=2
+      if(alone){
+        alone=false
+        startMultiplayerGame(agreedSize)
+        if(welcomeState<126){
+          welcomeState=126
+          startMultiplayerGame(agreedSize)
+          clearTimeout(welcomeTimeout)
+        }
+      }
+      break;
+    case N_WELCOME:
+      alone=false
+      agreedSize=arr[3]
+      if(welcomeState<126 && (arr[2]&-2)>=(welcomeState&-2)){
+        //console.log(myType)
+        myType&=~arr[1]
+        //console.log(myType)
+        if(myType==0){
+          return tryNextTag()
+        }
+      }
+      break;
+    case N_CATCHUP:
+      if(welcomeState<126 && !(welcomeState&1)){
+        setWelcomeTimeout()
+        if(arr[1]+arr[2]*256==lastCatchup+1){
+          recieveMessage(arr.slice(3))
+          lastCatchup+=1
+        }
+      }
+      break;
+    case N_CATCHUPDONE:
+      if(welcomeState<126) welcomeState|=1
+      break;
+    case N_MOVE:
+      if(welcomeState<126){
+        if(!alone && myType!=3){
+          welcomeState=126
+          startMultiplayerGame(agreedSize)
+          clearTimeout(welcomeTimeout)
+        }else{
+          tryNextTag()
+          break;
+        }
+      }
+      move(arr.slice(1,3),(arr[3]==1)?"l":"r",true)
+      break;
+    case N_KICK:
+      ws.close()
+      break;
+    case N_RESET:
+      if(confirm("do you want to reset?")){
+        startMultiplayerGame(agreedSize)
+        moveHistory=[]
+      }
+      break;
+    default:
+      console.log("incomprehensible message",arr)
+  }
+}
+
+let tags
+function tryNextTag(){
+  agreedSize = preferredSize;
+  multiplayerSearch.classList.remove("hidden")
+  clearTimeout(welcomeTimeout)
+  msg.innerText="Searching for multiplayer game"
+  if(t = tags.pop()){
+    console.log("connecting to tag: "+t)
+    connect(t)
+  }else{
+    msg.innerText="No free spaces for a multiplayer game"
+    multiplayerSearch.classList.add("hidden")
+  }
+}
+function lookForMPGame(size){
+  if(Notification.permission !="granted" && Notification.permission !="denied") {Notification.requestPermission()}
+  tags = []
+  for (let c of "1234567890qwertyuiopasdfghjklzxcvbnm"){
+    tags.push("hex"+c)
+  }
+  preferredSize=size
+  tryNextTag()
+}
+
+let MPGameRunning = false
+function startMultiplayerGame(N){
+  if(Notification.permission=="granted" && (document.hidden || !hasfocus)){
+    beep()
+    new Notification("Hexed Multiplayer game started");
+  }
+  MPGameRunning = true
+  multiplayerSearch.classList.add("hidden")
+  startGame(N)
+  getPlayer = () => (myType===1)?"l":"r"
+  let oldMove = move
+  move = function([di,dj],player,nosend){
+    if(!nosend && !hasPriority())return false;
+    let result
+    if (result=oldMove([di,dj],player) ){
+      moveHistory.push(new Int8Array([N_MOVE,di,dj, (player=="l")?1:2 ]))
+      if(ws && !nosend)ws.send(moveHistory[moveHistory.length-1])
+      //if(result===true){connected=false;ws.close();ws=undefined}
+      return result;
+    }
+    return false
+  }
+  let oldEndGame=endGame
+  endGame = function(reason){
+    MPGameRunning = false
+    oldEndGame(reason)
+    let sock=ws
+    function clsws(){
+      if(sock.bufferedAmount>0){
+        console.log("Waiting to close socket", sock.bufferedAmount)
+        setTimeout(clsws, 1)
+      }else{
+        sock.close()
+      }
+    }
+    setTimeout(clsws,1)
+    connected=false
+  }
+  if(turn!=getPlayer()){// Fix the UI slightly
+      for (let k in toClear[turn]) if(k=="next" || k=="active"){
+        for(let n of toClear[turn][k]) n.classList.remove(k)
+      }
+  }
+  addPreMoves()
+}
+</script>
+
+
+
+
+
+
+
+<script id=premoves>
+
+function addPreMoves(){
+  premoveInfo.classList.remove("hidden")
+  let premoves = {"l":[],"r":[]}
+  let preEdges = {"l":[],"r":[]}
+  let premovePos = {"l":positions["l"],"r":positions["r"]}
+  let oldMove = move
+  let oldMoveTo = moveTo
+  moveTo = function(dest,player){
+    if(getPlayer()!=turn){
+      let p = premovePos[player]
+      return move(vsub(dest,p),player)
+    }
+    else{
+      return oldMoveTo(dest,player)
+    }
+  }
+  move = function(direction,player,nosend){
+    if(turn==player){
+      if ( oldMove(direction,player,nosend)){
+        premovePos[player] = positions[player]
+        while(premoves[turn].length){
+          if(! oldMove(premoves[turn].splice(0,1)[0], turn) ){
+            clearPremoves(turn)
+            premoves[turn]=[]
+            premovePos[turn] = positions[turn]
+          }
+        }
+      }
+    }else{// try adding a premove
+      if(!dirs.reduce((acc,d)=>(d==direction+"")||acc,false)){
+        return false;
+      }
+      let oldpos = premovePos[player]
+      let newpos = vadd(oldpos,direction)
+      if(premoves[player].length && direction+""==vsub([0,0],premoves[player][premoves[player].length-1])){
+        premoves[player].pop()
+        premovePos[player]=newpos
+        edges[oldpos][newpos].classList.remove("premove")
+      } else{
+        if(!(newpos in verts) || (newpos in visited)) {
+          return false
+        }
+        premovePos[player]=newpos
+        premoves[player].push(direction)
+        edges[oldpos][newpos].classList.add("premove")
+        preEdges[player].push(edges[oldpos][newpos])
+      }
+    }
+    if(getPlayer()!=turn){
+      let mvs = getNextLegalMoves(premovePos[getPlayer()])
+      //console.log(verts[positions[turn]])
+      //addClassTmp(turn,verts[positions[turn]],"active")
+      for (let k in toClear[turn]) if(k=="next" || k=="active"){
+        for(let n of toClear[turn][k]) n.classList.remove(k)
+      }
+      for(let d of mvs){
+        addClassTmp(turn,verts[vadd(premovePos[getPlayer()],d)],"next")
+      }
+    }
+  }
+  function clearPremoves(player){
+    premoves[player]=[]
+    premovePos[player]=positions[player]
+    for(let e of preEdges[player]){
+      e.classList.remove("premove")
+    }
+    preEdges[player]=[]
+  }
+  let localMove=move // Avoid undoing when playing a game without premoves
+  // this may prevent things from being garbage collected
+  document.addEventListener("keydown",function(e){
+    //console.log(e,e.key)
+    premvs = premoves[getPlayer()]
+    if(e.key=="Backspace" && premvs.length){
+      localMove(vsub([0,0],premvs[premvs.length-1]), getPlayer())
+    }
+    if(e.key=="Escape" && premvs.length){
+      clearPremoves(getPlayer())
+    }
+  })
+}
+</script>
+
+
+
+<script id=ai>
+"use strict";
+//type tree : {directions:[plays,wins,newpl,subtree]} | {}
+
+
+function readTime(s){
+  if (typeof s == "string"){
+    if (s[s.length-1]=="s"){
+      let n = +s.slice(0,s.length-1)
+      return n*1000
+    }
+  }
+}
+async function AI(positions,visited,player,tree,numrolls){
+  if (numrolls===undefined){
+    numrolls=10000
+  }
+  let t = readTime(numrolls)
+  let s = mkState(positions,visited,player,tree)
+  let startTime= performance.now();
+  let lastSleep=startTime;
+  //
+  if(t && t>0){
+    let tnow = 0;
+    while((tnow=performance.now()) - startTime < t){
+      if(tnow - lastSleep > 33){
+        await new Promise(requestAnimationFrame)
+        lastSleep=performance.now();
+      }
+      roll(...s)
+    }
+  }else{
+    numrolls = +numrolls
+    for(let i=0;i<numrolls;i++){
+      if(performance.now() - lastSleep > 33){
+        await new Promise(requestAnimationFrame)
+        lastSleep=performance.now();
+      }
+      roll(...s)
+    }
+  }
+  //console.log(s)
+  return getBest(s)
+}
+
+function getBest(state){
+  let tree = state[3]
+  let bestk = undefined;
+  let bestVal = -Infinity
+  for (let k in tree){
+    let [plays,wins,npl,nextTree] = tree[k]
+    let val = wins/(plays+1)
+    if (val>bestVal){
+      bestVal=val
+      bestk=k
+    }
+  }
+  console.log(bestVal)
+  console.log(Object.keys(tree).reduce(((a,b)=>tree[b][0]+a),0))
+  return bestk;
+}
+
+function mkState(positions,visited,player,tree){
+  let valid = {}
+  for (let k in gv){valid[k] = !visited[k]}
+  let p = positions[player]
+  let op = positions[player=="l"?"r":"l"]
+  return [p,op,valid,tree]
+}
+let depth=0
+function roll(pl,ot,valid, tree){
+  depth=0
+  step(pl,ot,valid,tree)
+}
+function step(pl,ot,valid,tree){
+  depth+=1
+  //console.log(Object.keys(valid).length)
+  //if(depth%100)console.log(depth)
+  if(depth>2000) throw Error("arg")
+  if(!Object.keys(tree).length){
+    for(let d of dirs.sort(()=>Math.random()-0.5)) {
+    //for(let d of dirs) {
+      let np = vadd(pl,d)
+      if(valid[np]){
+        tree[d]=[0,0,np,{}]
+      }
+    }
+    if(!Object.keys(tree).length){
+      return 1
+    }
+  }
+  let bestk = undefined;
+  let bestVal = -Infinity
+  for (let k in tree){
+    let [plays,wins,npl,nextTree] = tree[k]
+    if (plays==0){
+      valid[npl]=false
+      let res = step(ot,npl,valid,nextTree)
+      valid[npl]=true
+      tree[k][0]+=1
+      tree[k][1]+=res
+      return (1-res)
+    }
+    let val = (wins/plays) - Math.log2(plays)
+    if(val>bestVal){
+      bestVal = val
+      bestk = k
+    }
+  }
+  let [plays,wins,npl,nextTree] = tree[bestk]
+  valid[npl]=false
+  let res = step(ot,npl,valid,nextTree)
+  valid[npl]=true
+  tree[bestk][0]=plays+1
+  tree[bestk][1]=wins+res
+  return (1-res)
+}
+function startAIGame(N,diff){
+  startGame(N)
+  let tree = {}
+  const oldMove = move
+  getPlayer = ()=>"l"
+  move = function(dir,player,nosend){
+    let res = oldMove(dir,player,nosend)
+    if(res && res!==true){
+      tree = (tree[dir]??[])[3] ?? {}
+      if(turn!==getPlayer()){
+        //console.log(dir,tree,tree[dir])
+        //console.log(tree)
+        let mv = move // save it so that the AI doesn't start playing moves in a multiplayer game
+        setTimeout(async ()=>{
+          let res = await AI(positions,visited,turn,tree,diff)
+          let dir = res.split(",").map(x=>+x)
+          //console.log(dir,tree[dir][3],tree)
+          if(mv===move) mv(dir,turn)
+        },0)
+      }
+    }
+    return res
+  }
+  addPreMoves()
+}
+</script>
+
+</html>
