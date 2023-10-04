@@ -700,7 +700,18 @@ function startMultiplayerGame(N){
   endGame = function(reason){
     MPGameRunning = false
     oldEndGame(reason)
-    setTimeout(()=>{ws.close()}, 1)
+    // don't close the socket until all buffered messages are sent.
+    let sock=ws
+    function clsws(){
+      if(sock.bufferedAmount>0){
+        console.log("Waiting to close socket", sock.bufferedAmount)
+        setTimeout(clsws, 10)
+      }else{
+        setTimeout(()=>sock.close(),100)
+      }
+    }
+    clsws()
+
     connected=false
   }
   if(turn!=getPlayer()){// Fix the UI slightly
