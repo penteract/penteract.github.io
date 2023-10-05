@@ -750,12 +750,13 @@ function startMultiplayerGame(N){
     function clsws(){
       if(sock.bufferedAmount>0){
         console.log("Waiting to close socket", sock.bufferedAmount)
-        setTimeout(clsws, 1)
+        setTimeout(clsws, 10)
       }else{
-        sock.close()
+        setTimeout(()=>sock.close(),100)
       }
     }
-    setTimeout(clsws,1)
+    clsws()
+
     connected=false
   }
   if(turn!=getPlayer()){// Fix the UI slightly
