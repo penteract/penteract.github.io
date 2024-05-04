@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+svg{
+position:fixed; left:0; top:0; width:0; height:0
+}
+</style>
+<svg xmlns='http://www.w3.org/2000/svg'><defs><filter id='gParts' color-interpolation-filters='sRGB' x='0%' y='0%' width='100%' height='100%'>
+<feColorMatrix in='SourceGraphic' values='0.0 1.0 0.0 0.0 0.0,-2550.1 2549.9 -0.1 -0.1 -0.1,0.9 2550.9 -2549.1 0.9 0.9,0 0 0 1 0' result='ef0'>
+</feColorMatrix>
+<feColorMatrix in='ef0' values='1.0 1.0 1.0 0.0 -2.0,1.0 -1.0 -1.0 0.0 1.0,1.0 -1.0 -1.0 0.0 0.0,0.0 0.0 0.0 0.0 1.0' result='ef1'>
+</feColorMatrix>
+</filter></defs></svg>
+
+<svg xmlns='http://www.w3.org/2000/svg'><defs><filter id='sorted' color-interpolation-filters='sRGB' x='0%' y='0%' width='100%' height='100%'>
+<feColorMatrix in='SourceGraphic' values='1.0 0.0 0.0 0.0 0.0,2550.9 -2549.1 0.9 0.9 0.9,2550.9 0.9 -2549.1 0.9 0.9,0 0 0 1 0' result='ef0'>
+</feColorMatrix>
+<feColorMatrix in='ef0' values='1.0 1.0 1.0 0.0 -2.0,1.0 -1.0 -1.0 0.0 1.0,1.0 -1.0 -1.0 0.0 0.0,0.0 0.0 0.0 0.0 1.0' result='ef1'>
+</feColorMatrix>
+<feColorMatrix in='SourceGraphic' values='0.0 1.0 0.0 0.0 0.0,-2550.1 2549.9 -0.1 -0.1 -0.1,0.9 2550.9 -2549.1 0.9 0.9,0 0 0 1 0' result='ef2'>
+</feColorMatrix>
+<feColorMatrix in='ef2' values='1.0 1.0 1.0 0.0 -2.0,1.0 -1.0 -1.0 0.0 1.0,1.0 -1.0 -1.0 0.0 0.0,0.0 0.0 0.0 0.0 1.0' result='ef3'>
+</feColorMatrix>
+<feComposite in='ef1' in2='ef3' operator='arithmetic' k1='0.0' k2='0.5' k3='0.5' k4='0.0' result='ef4'>
+</feComposite>
+<feColorMatrix in='SourceGraphic' values='0.0 0.0 1.0 0.0 0.0,-2550.1 -0.1 2549.9 -0.1 -0.1,-0.1 -2550.1 2549.9 -0.1 -0.1,0 0 0 1 0' result='ef5'>
+</feColorMatrix>
+<feColorMatrix in='ef5' values='1.0 1.0 1.0 0.0 -2.0,1.0 -1.0 -1.0 0.0 1.0,1.0 -1.0 -1.0 0.0 0.0,0.0 0.0 0.0 0.0 1.0' result='ef6'>
+</feColorMatrix>
+<feComposite in='ef4' in2='ef6' operator='arithmetic' k1='0.0' k2='1.0' k3='0.5' k4='0.0' result='ef7'>
+</feComposite>
+<feColorMatrix in='ef7' values='2.0 0.0 0.0 0.0 0.0,0.0 2.0 0.0 0.0 -1.0,0.0 0.0 2.0 0.0 0.0,0 0 0 1 0' result='ef8'>
+</feColorMatrix>
+</filter></defs></svg>
+
+
+<style>
+.srt {
+    filter:url("#sorted")
+    /*filter: hue-rotate( 180deg ) hue-rotate( 180deg );*/
+}
+.b{
+filter: url("#gParts");
+}
+img{
+border:0px;
+padding:0px;
+margin:0px;
+}
+
+</style>
+</head>
+<body>
+<img src="rg.bmp" />
+<span class=b> <img src="rg.bmp" /></span>
+<img src="rg.bmp" class="srt" /><br>
+<img src="rg1.bmp" />
+<span class=b> <img src="rg1.bmp" /></span>
+<img src="rg1.bmp" class="srt" />
+</body>
+</html>
