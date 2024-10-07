@@ -1,0 +1,232 @@
+<html>
+
+<head>
+    <title> Anthill </title>
+    <style>
+        html,
+        body,
+        canvas {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        #hud {
+            position: absolute;
+            width: 100%;
+            /*height: 10%;*/
+            top: 0px;
+            margin: 0px;
+            padding: 5px;
+            pointer-events: none;
+        }
+
+        fieldset {
+            display: inline-block;
+            text-decoration: none;
+            border: 0px;
+            pointer-events: initial;
+        }
+
+        fieldset>div {
+            background-color: #FFF2;
+            display: inline-block;
+        }
+
+        fieldset input {
+
+            display: none;
+        }
+
+        fieldset input+label>svg {
+            border: 10px solid #0000;
+        }
+
+        fieldset input:hover+label>svg {
+            border: 10px solid #2F2;
+        }
+
+        fieldset input:checked+label>svg {
+            border: 10px solid blue;
+        }
+
+        #tutorial {
+            display: none;
+            position: absolute;
+            width: 30%;
+            top: 20%;
+            left: 35%;
+            /** todo: find a colour that all the coloured text is readable against */
+            background: #8a83a7e7;
+            padding: 20px;
+            border: #2222 10px solid;
+        }
+
+        #tutorial>h1 {
+            text-align: center;
+        }
+
+        #tut-close {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #FFF2;
+        }
+
+        #tut-close>svg {
+            border: 10px solid #0000;
+        }
+
+        #tut-close:hover>svg {
+            border: 10px solid #F22;
+        }
+
+        .tut-ant {
+            color: darkred;
+            /* could we set these in js to ensure the're consistent with colMap? */
+        }
+
+        .tut-dirt {
+            color: Sienna;
+        }
+
+        .tut-tunnel {
+            color: sandybrown;
+        }
+
+        .tut-food {
+            color: #006a00; /* forestgreen;  #008B00 */
+        }
+
+        .tut-air {
+            color: skyblue;
+        }
+
+        .tut-grub {
+            color: seashell;
+        }
+
+        .tut-queen {
+            color: hotpink;
+        }
+
+        .tut-water {
+            color: #00D;
+        }
+    </style>
+</head>
+
+<body oncontextmenu="return false">
+    <canvas id="main">
+    </canvas>
+    <div id="hud">
+        <fieldset id=actions>
+
+            <!-- document.querySelector('input[name="action"]:checked').value;  to get value
+     (https://stackoverflow.com/a/15839451/1779797)
+    -->
+
+            <div onclick="updateHud()" title="Dig and build dirt">
+                <input type="radio" id="flexible" name="action" value="flexible" checked="true" />
+                <label for="flexible"> <svg width="80px" height="80px" viewBox="-1 -1.5 24 24" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                            <path
+                                d="M15.732,2.509 L13.495,0.274 C13.064,-0.159 12.346,-0.141 11.892,0.312 C11.848,0.356 11.817,0.411 11.8,0.471 C11.241,2.706 11.253,3.487 11.346,3.794 L5.081,10.059 L3.162,8.142 L0.872,10.432 C0.123,11.18 -0.503,13.91 0.795,15.207 C2.092,16.504 4.819,15.875 5.566,15.128 L7.86,12.836 L5.981,10.958 L12.265,4.675 C12.607,4.752 13.423,4.732 15.535,4.205 C15.595,4.188 15.65,4.158 15.694,4.114 C16.147,3.661 16.163,2.941 15.732,2.509 L15.732,2.509 Z M15.15,3.459 C14.047,3.77 12.765,4.046 12.481,3.992 L12.046,3.557 C11.984,3.291 12.262,1.996 12.576,0.886 C12.757,0.752 12.989,0.748 13.129,0.888 L15.147,2.906 C15.285,3.045 15.281,3.277 15.15,3.459 L15.15,3.459 Z"
+                                fill="#000">
+                            </path>
+                            <!-- corners: 2 1.5; 32 31.5  -->
+                            <!-- corners: 1 0.5; 22 21.5  -->
+                            <path d="M 1 21.5 L 22 21.5 L 22 0.5 Z" fill="sienna">
+                        </g>
+                    </svg></label>
+            </div>
+
+            <div onclick="updateHud()" title="Dig">
+                <input type="radio" id="dig" name="action" value="dig" />
+                <label for="dig"> <svg width="80px" height="80px" viewBox="-1 -1.5 19 19" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                            <path
+                                d="M15.732,2.509 L13.495,0.274 C13.064,-0.159 12.346,-0.141 11.892,0.312 C11.848,0.356 11.817,0.411 11.8,0.471 C11.241,2.706 11.253,3.487 11.346,3.794 L5.081,10.059 L3.162,8.142 L0.872,10.432 C0.123,11.18 -0.503,13.91 0.795,15.207 C2.092,16.504 4.819,15.875 5.566,15.128 L7.86,12.836 L5.981,10.958 L12.265,4.675 C12.607,4.752 13.423,4.732 15.535,4.205 C15.595,4.188 15.65,4.158 15.694,4.114 C16.147,3.661 16.163,2.941 15.732,2.509 L15.732,2.509 Z M15.15,3.459 C14.047,3.77 12.765,4.046 12.481,3.992 L12.046,3.557 C11.984,3.291 12.262,1.996 12.576,0.886 C12.757,0.752 12.989,0.748 13.129,0.888 L15.147,2.906 C15.285,3.045 15.281,3.277 15.15,3.459 L15.15,3.459 Z"
+                                fill="#000">
+                            </path>
+                        </g>
+                    </svg></label>
+            </div>
+
+            <div onclick="updateHud()" title="Build dirt">
+                <input type="radio" id="dirt" name="action" value="dirt" />
+                <label for="dirt"><svg width="80px" height="80px" viewBox="-1 -1 12 12" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <rect x=0 y=0 width=10 height=10 fill="sienna"> </rect>
+                    </svg></label>
+            </div>
+
+            <div onclick="updateHud()" title="Set Queen's home">
+                <input type="radio" id="queen" name="action" value="queen" />
+                <label for="queen"> <svg width="80px" height="80px" viewBox="-1 -1 12 12" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <rect x=0 y=0 width=10 height=10 fill="hotpink"> </rect>
+                    </svg></label>
+            </div>
+            <div onclick="updateHud()" title="Designate Grub nursery">
+                <input type="radio" id="grub" name="action" value="grub" />
+                <label for="grub"> <svg width="80px" height="80px" viewBox="-1 -1 12 12" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <rect x=0 y=0 width=10 height=10 fill="seashell"> </rect>
+                    </svg></label>
+            </div>
+            <div onclick="updateHud()" title="Cancel orders">
+                <input type="radio" id="cancel" name="action" value="cancel" />
+                <label for="cancel"> <svg width="80px" height="80px" viewBox="-6 -6 12 12" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <g transform="rotate(45)">
+                            <rect x="-5" y="-0.5" width="10" height="1" fill="black"> </rect>
+                            <rect x="-0.5" y="-5" width="1" height="10" fill="black"> </rect>
+                        </g>
+                    </svg></label>
+            </div>
+        </fieldset>
+
+        <div>Order mode: <span id="order-mode"></span></div>
+        <div>Queen saturation: <span id="queen-sat"></span></div>
+        <div>Population: <span id="population"></span></div>
+        <div>Score: <span id="score"></span></div>
+    </div>
+
+    <div id="tutorial">
+        <h1>How to play</h1>
+        <div id="tut-close" onclick="hideTutorial()" title="Close tutorial">
+
+            <svg width="40px" height="40px" viewBox="-6 -6 12 12" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink">
+                <g transform="rotate(45)">
+                    <rect x="-5" y="-0.5" width="10" height="1" fill="black"> </rect>
+                    <rect x="-0.5" y="-5" width="1" height="10" fill="black"> </rect>
+                </g>
+            </svg>
+        </div>
+        <p>Click and drag to order your <span class="tut-ant">worker ants</span> to (by default) dig and build <span
+                class="tut-dirt">dirt</span>.</p>
+        <p>Use the right mouse button or the Cancel mode to cancel orders.</p>
+        <p>Use arrow keys, or drag the middle mouse button to pan around the map, and use the scroll wheel
+            to zoom.</p>
+        <p><span class="tut-dirt">Dirt</span> with no orders to build will be brought to the nearest <span
+                class="tut-air">air</span> space and become a <span class="tut-tunnel">wall</span> for <span
+                class="tut-ant">ants</span> to climb on and <span class="tut-dirt">solid dirt</span> to be built on.</p>
+        <p>Find <span class="tut-food">food</span> to bring to the <span class="tut-queen">Queen</span> to produce <span
+                class="tut-grub">grubs</span> that will grow into new <span class="tut-ant">worker ants</span>.</p>
+        <p>Dig tunnels and build structures to divert <span class="tut-water">water</span> to keep your colony safe from
+            drowning. <span class="tut-water">Rainfall</span> will come and go, but gradually get heavier over time!</p>
+        <p>Use the appropriate order modes to designate <span class="tut-grub">grub nurseries</span> for <span
+                class="tut-ant">ants</span> to bring new <span class="tut-grub">grubs</span> to, and set the <span
+                class="tut-queen">Queen home</span> to have the <span class="tut-queen">Queen</span> be moved.</p>
+    </div>
+
+    <script src="heap.js"> </script>
+    <script src="simulation.js"> </script>
+    <script src="graphics.js"> </script>
+    <script src="interface.js"></script>
+    <script src="zoomPan.js"> </script>
+</body>
+<html>
