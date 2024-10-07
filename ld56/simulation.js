@@ -50,6 +50,7 @@ function clearNursery(p) {
 }
 function setQueenHome(p) {
     if (emptyForOrder(p) && !nmap[p]) {
+        clearOrder(queenHome)
         queenHome = p
     }
 }
@@ -107,8 +108,7 @@ function hCost(q, d) {
 
 function incScore(amt = 1) {
     score += amt
-    localStorage["highScore"] ??= 0
-    localStorage["highScore"] = Math.max(score, localStorage["highScore"])
+    localStorage["highScore" + gameMode] = Math.max(score, localStorage["highScore" + gameMode] ?? 0)
 }
 
 workerOrdersAttempted = 0
@@ -833,7 +833,7 @@ function willBeSolid(p) {
 function willWalk(p, type) {
     return ((!isSolid(p) && inBounds(p) &&
         (map[p]?.includes("tunnel") || willBeSolid([p[0], p[1] - 1]) || willBeSolid([p[0] - 1, p[1] - 1]) || willBeSolid([p[0] + 1, p[1] - 1]))
-        || (targets[["worker", p]] && (type == "worker" || getSolidTypeObj(p) === type)) || solidTypes.find(t => draggers[[t, p]]) || orders["worker"][p])
+        || ((targets[["worker", p]] || orders["worker"][p]) && (type == "worker" || getSolidTypeObj(p) === type)) || solidTypes.find(t => draggers[[t, p]]))
     )
 }
 
@@ -936,7 +936,9 @@ function tick() {
     console.log(- t + (t = performance.now()), "delays")
     k = Math.log(tickCount) - 6
     diffScaler = k ** 2 * Math.sign(k) / 300
+    if (gameMode !== "hard" && diffScaler >= 0) { diffScaler = 0 }
     RainProb = (1 + Math.sin(tickCount / 100)) ** 2 * 0.01 + diffScaler
+    if (gameMode === "sandbox") { RainProb = 0 }
     // Should this vary by x coordinate? That would mean you'd have to deal with floods coming from the sides, as well as just rain from above
     let newWater = []
     for (let x = minx; x <= maxx; x++) {

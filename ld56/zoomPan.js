@@ -23,7 +23,9 @@ function scl(x, y, factor) {
 }
 function whl(e) {
     //console.log(e.deltaY)
-    if (e.deltaY != 0) scl(e.clientX, e.clientY, Math.pow(0.95, e.deltaY))
+    if(!tutorial.contains(document.elementFromPoint(e.clientX,e.clientY)) ){
+      if (e.deltaY != 0) scl(e.clientX, e.clientY, Math.pow(0.95, e.deltaY))
+    }
 }
 function roundAway(x) {
     return x > 0 ? Math.ceil(x) : Math.floor(x)
