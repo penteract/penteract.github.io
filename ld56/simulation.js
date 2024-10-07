@@ -930,7 +930,7 @@ function tick() {
             }
         }
     }
-    if (tickCount === 4500) { // 15 minutes on the default speed of 200 ms/t
+    if (tickCount === 4500 && gameMode !== "sandbox") { // 15 minutes on the default speed of 200 ms/t
         win()
     }
     console.log(- t + (t = performance.now()), "delays")
