@@ -163,11 +163,11 @@ draw("<g stroke=black>"+ pth + drawNodes()+"</g>")
 <h3> Nondeterministic Automata </h3>
 <p>Overlapping shapes can be described by non-deterministic automata where each node may have multiple (or zero) edges with a given label. In this case we don't need a separate state for empty squares - if a corner of a node is empty, it may simply have no outgoing edges with that label.</p>
 
-<p> For our purposes, any given non-deterministic automaton may be converted to a deterministic automaton by having a node in the new one for every set of nodes in the old one. The node corresponding to the set S should have an edge labeled l to set of all nodes in the old automaton with edges labeled l from some element of S, and all sets containing the full node F may be collapsed into one, with edges to itself.</p>
+<p> For our purposes, any given non-deterministic automaton may be converted to a deterministic automaton by having a node in the new one for every set of nodes in the old one. The node corresponding to the set S should have an edge labeled l to the set of all nodes in the old automaton with edges labeled l from some element of S, and all sets containing the full node F may be collapsed into one, with edges to itself.</p>
 
 <h2>Describing the Pythagoras tree using an automaton</h2>
 
-One way to look at the Pythagoras tree is as 4 copies of itself, together with the 3 squares in the depth 2 rendering.
+<p> One way to look at the Pythagoras tree is as 4 copies of itself, together with the 3 squares in the depth 2 rendering.</p>
 
 <svg id=divisionssvg viewBox="-3.4 -0.4 7.8 4.8">
 </svg>
@@ -332,7 +332,7 @@ allNodes = ns2+`<g transform="rotate(90 0.5 -4)">${ns}</g>`+
 draw("<g stroke=black>"+edgs+allNodes+"</g>")
 </script>
 
-Now we show all the transitions, including ones from rotated copies of the original and with edges colored according to the label associated with that edge.
+<p> Now we show all the transitions, including ones from rotated copies of the original and with edges colored according to the label associated with that edge.</p>
 <svg id=fullgraphsvg viewBox="-7 -13.4 15 17.8">
 </svg>
 <script type="text/javascript" id="fullgraph">
