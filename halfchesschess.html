@@ -2,7 +2,7 @@
 <head>
 <!--
   TODO: 
-  online multiplayer
+  // online multiplayer
   better "change your mind" features
   50 move rule
   chess clock
@@ -31,7 +31,7 @@ body{
 }
 .board.animate{
   transition-property: transform;
-  transition-duration: 1s;
+  transition-duration: 0.5s;
 }
 .board>g>g:where(g:nth-child(even)>g:nth-child(even), g:nth-child(odd)>g:nth-child(odd))>rect{
   fill:  hsl(30, 35%, 50%);
@@ -276,13 +276,24 @@ class Pawn extends Piece{
     return mvs
   }
   execute(src,board,tgt){
-    super.execute(src,board,tgt)
+    let r =super.execute(src,board,tgt)
+    if (r) return r
     let [x,y] = fromIx(src)
     let [x2,y2] = fromIx(tgt[0])
     if (Math.abs(y2-y)==2){
       let mid = [x,(y+y2)/2]
       addVirt(board,mid,tgt[0],this)
     }
+    let [,,ny,my] = getVariantBounds(board.variant)
+    console
+    if(tgt[0][1]==ny || tgt[0][1]==my){
+      state.push([board,"promoting",[tgt[0],this]])
+      // Object.setPrototypeOf(this,Queen.prototype) // WARNING: said to make everything slow
+    //new Queen(this.col)
+    }
+  }
+  promote(become){
+    Object.setPrototypeOf(this,become)
   }
 }
 Pawn.prototype.charstr="♙♟︎"
@@ -359,15 +370,34 @@ class King extends Leaper{
     return mvs.filter(p=>board.variant[this.col][p[0]]) // don't allow a king to move away from its half board
   }
   execute(src,board,tgt){
-    if(!this.moved)
-    super.execute(src,board,tgt)
     let [x,y] = fromIx(src)
     let [x2,y2] = fromIx(tgt[0])
+    let mid
     if (Math.abs(x2-x)==2){
-      let mid = [(x+x2)/2,y]
+      mid = [(x+x2)/2,y]
+      let rpos = mid
+      let d = [(x2-x)/2,0]
+      while(isEmpty(board[rpos])){
+        rpos = vadd(d,rpos)
+      }
+      let r
+      let ps = board[rpos]
+      for(let p of ps){
+        if(p instanceof Rook && p.col==this.col && !p.moved){
+          r=p
+          break
+        }
+      }
+      if (!r) throw new Error("can't find rook when castling")
+      ps.splice(ps.indexOf(r),1)
+      board[mid].splice(1,board[mid].length,r)
+    }
+    let r = super.execute(src,board,tgt)
+    if (Math.abs(x2-x)==2){
       addVirt(board,mid,tgt[0],this)
       addVirt(board,src,tgt[0],this)
     }
+    return r
   }
 }
 King.prototype.directions = Queen.prototype.directions
@@ -505,27 +535,6 @@ function getVariantBounds(variant){
 function mkel(tag){
   return document.createElementNS("http://www.w3.org/2000/svg",tag)
 }
-function drawPic(board,pos,sz){
-  let ps = board[pos]
-  for(let p of ps){
-    if (!p.isVirtual){
-      let pic = mkel("use")
-      pic.setAttribute("href", "#"+"wb"[p.col]+p.letter)
-      pic.setAttribute("width",sz)
-      pic.setAttribute("height",sz)
-      return pic
-    }
-  }
-}
-function drawSubBoard(board,pos,depth){
-  let ps = board[pos]
-  for(let p of ps){
-    if (p.subBoard){
-      p.drawing=drawBoard(p.subBoard,depth+1)
-      return p.drawing
-    }
-  }
-}
 
 function drawBoard(board,depth){
   let [nx,mx,ny,my] = getVariantBounds(board.variant)
@@ -554,13 +563,24 @@ function drawBoard(board,depth){
         cell.append(rect)
         if(depth===0) addHandlers(cell,x,y,depth)
 
-        let pic = drawPic(board,pos,sz)
-        if (pic) cell.append(pic)
-        let sb = drawSubBoard(board,pos,depth)
-        if(sb){
-          let scale = 1/Math.max(xs,ys)
-          sb.setAttribute("transform",`scale(${scale},${scale}) translate(32,32) scale(0.9,0.9)`) // 32 = 640*(1-0.9) / 2
-          cell.append(sb)
+        let ps = board[pos]
+        for(let p of ps){
+          if (!p.isVirtual){
+            let pic = mkel("use")
+            pic.classList.add("piecepic")
+            pic.setAttribute("href", "#"+"wb"[p.col]+p.letter)
+            pic.setAttribute("width",sz)
+            pic.setAttribute("height",sz)
+            p.pic = mkel("g")
+            p.pic.append(pic)
+            if (p.subBoard){
+              let scale = 1/Math.max(xs,ys)
+              let sb = drawBoard(p.subBoard,depth+1)
+              sb.setAttribute("transform",`scale(${scale},${scale}) translate(32,32) scale(0.9,0.9)`) // 32 = 640*(1-0.9) / 2
+              p.pic.append(sb)
+            }
+          }
+          cell.append(p.pic)
         }
 
         let dot = mkel("circle")
@@ -580,23 +600,27 @@ function drawBoard(board,depth){
 
 function drawAll(){
   main.replaceChildren(drawBoard(state[0][0],0))
-  if(lastTurn)for(let mv of lastTurn){
+  if(lastTurn)for(let mv of lastTurn)if(mv[1]!="promoting"){
     mv[0][mv[2][0]].cell.classList.add("lastmovesrc")
     mv[0][mv[3][0]].cell.classList.add("lastmovedst")
   }
 }
 
 
-function resetTurn(){
+function resetTurn(ended){
+  if (!ended && state[state.length-1][1]=="promoting"){
+    clk(0,0) // Promote to Queen
+    return
+  }
   state = [[state[0][0],"unselected"] ]
   drawAll()
 }
 function endTurn(){
   turn=1-turn
-  resetTurn()
+  resetTurn(true)
 }
-function gameOver(){
-  gameovermessage.innerText=["White","Black"][turn]+" wins!!!"
+function gameOver(message){
+  gameovermessage.innerText=message //["White","Black"][turn]+" wins!!!"
   gameover.classList.remove("hidden")
 }
 function executeTurn(){
@@ -605,14 +629,48 @@ function executeTurn(){
   for(let i=state.length-1;i>=0;i--){
     let [gm,,[src,p],tgt] = state[i]
     if(!p.execute(src,gm,tgt)) {
-      endTurn()
+      if(state[state.length-1][1]!="promoting") {endTurn()}
+      else {drawPromotion(turn)}
       break
     }
     if(i==0){
       // game is over
-      gameOver()
-      console.log(["White","Black"][turn]+" wins!!!")
+      gameOver(["White","Black"][turn]+" wins!!!")
+      //console.log()
     }
+  }
+}
+const promotionTypes =[Queen,Rook,Bishop,Knight]
+const promotions = []
+
+for (let c in [0,1]){
+  let proms = {}
+  promotionTypes.map((v,x)=>{
+    proms[[x,0]] = [new v(c)]
+  })
+  proms.variant=[proms,proms]
+  promotions.push(proms)
+}
+function drawPromotion(col){
+  main.append(drawBoard(promotions[col],state.length-1))
+  for(let r in promotions[col]){
+    if (r.includes(",")){
+      addHandlers(promotions[col][r].cell,...fromIx(r) ,state.length-1)
+    }
+  }
+}
+
+pawnlog = [[3,1],[3,3],[2,4],[3,3],[2,4],[2,3],[3,3],[2,4],[1,1],[1,2],[1,4],[1,3],[3,3],[2,4],[2,0],[0,2],[2,5],[0,3],[3,3],[2,4],[0,2],[3,5],[1,3],[1,3],[1,3],[1,2],[2,5],[2,5],[2,4],[2,4],[2,4],[2,5]]
+promotelog = [[3,1],[3,3],[2,4],[3,3],[2,4],[2,3],[3,3],[2,4],[1,1],[1,2],[1,4],[1,3],[3,3],[2,4],[2,0],[0,2],[2,5],[0,3],[3,3],[2,4],[0,2],[3,5],[1,3],[1,3],[1,2],[2,5],[2,5],[2,4],[2,4],[2,4],[2,5],[0,0]]
+
+function printlog(lg) {
+  if (lg===undefined) lg=log
+  return "[["+lg.join("],[")+"]]" 
+}
+async function replaylog(log,timing=500){
+  for (let xy of log){
+    clk(...xy)
+    await new Promise(r => setTimeout(r, timing));
   }
 }
 
@@ -643,8 +701,9 @@ function combineBoardsAndDraw(sb1,sb2){
   }
   return comb
 }
-
+let log = []
 function clk(x,y){
+  log.push([x,y])
   let nesting = state.length-1
   let st = state[nesting]
   console.log("click",st)
@@ -669,14 +728,23 @@ function clk(x,y){
           let tgt = p.getMoves(src,gm).filter(t=>t[0]==x+","+y)
           if (tgt.length!=1) throw new Error("couldn't find move")
           tgt = tgt[0]
-          st.splice(1,2,"subgame",st[2],tgt)
+          st.push(tgt)
+          //st.splice(1,2,"subgame",st[2],tgt)
           if(nesting==maxNesting || !tgt[1]){ //execute the move(s)
+            st[1]="executing"
             executeTurn()
           }
           else{//enter subgame
+            st[1]="subgame"
             state.push([combineBoardsAndDraw(p.creator.subBoard,tgt[1].creator.subBoard),"unselected"])
           }
         }
+        break;
+      case "promoting":
+        if(y!==0)throw new Error("stuff")
+        st[2][1].promote(promotionTypes[x].prototype)
+        st.push([[x,y],st[2][1]])
+        endTurn()
         break;
     }
 }
@@ -738,7 +806,7 @@ for fn in fs:
 </svg>
 <div id="gameover" class="hidden">
   <span id="gameovermessage">white wins!!!</span><br>
-  <button onclick="startGame(baseVariant)">restart</button>
+  <button onclick="startGame(variants[variantNum])">restart</button>
 </div>
 <div id=multiplayerSearch class="hidden">
   <span id="mpmessage"></span><br>
@@ -765,6 +833,8 @@ document.addEventListener("keydown",(e)=>{
 // [[Board,"selected",[Pos,Piece]]]
 // [[Board,"subgame",[Pos,Piece],[Pos,Piece]],[Board,"unselected"]]
 // [[Board,"subgame",[Pos,Piece],[Pos,Piece]],[Board,"selected",[Pos,Piece]]]
+// [[Board,"subgame",[Pos,Piece],[Pos,Piece]],[Board,"executing",[Pos,Piece],[Pos,Piece]],[Board,"promoting",[Pos,Piece]]]
+// [[Board,"subgame",[Pos,Piece],[Pos,Piece]],[Board,"promoting",[Pos,Piece]]]
 
 // drawBoard(game)
 
@@ -785,18 +855,19 @@ const urlParams = new URLSearchParams(window.location.search)
 //variant = 
 let variantNum = urlParams.get("v")??0
 if (! (variantNum in variants)) variantNum=0
-startGame(variants[urlParams.get("v")??0])
+startGame(variants[variantNum])
 </script>
 <script id="multiplayer">
-tag = "abcd";//urlParams.get("mp")
+tag = urlParams.get("mp")
 //let preferredSize,agreedSize
 let myType=0
 let ws,connected
 let welcomeTimeout
 let alone
 let moveHistory
+let oldClk
 
-if (false){//if(tag){
+if (tag){
   const server = "wss://tesseract.nfshost.com/connect/"
   const N_JOIN = 11
   const N_WELCOME = 12
@@ -822,6 +893,9 @@ if (false){//if(tag){
     }, 2000)
   }
   function connect(tag){
+    multiplayerSearch.classList.remove("hidden")
+    mpmessage.innerText="connecting"
+    
     if(connected) ws.close()
     connected=false
     ws = new WebSocket(server+tag)
@@ -859,9 +933,9 @@ if (false){//if(tag){
       console.log("connection closed")
       if(x.target===ws){
         connected=false
-        if(MPGameRunning)endGame("disconnected")
+        if(MPGameRunning)gameOver("disconnected")
         else if(!multiplayerSearch.classList.contains("hidden")){
-          mpmessage.innerText = "Game search closed"
+          mpmessage.innerText = "connection"
           multiplayerSearch.classList.add("hidden")
         }
       }
@@ -885,7 +959,7 @@ if (false){//if(tag){
           startMultiplayerGame(variantNum)
           if(welcomeState<126){
             welcomeState=126
-            startMultiplayerGame(variantNum)
+            //startMultiplayerGame(variantNum)
             clearTimeout(welcomeTimeout)
           }
         }
@@ -930,16 +1004,15 @@ if (false){//if(tag){
           }
         }
         let mvdat = arr.slice(1)
-        if (mvdat.length%4) throw new Error("move data not a multiple of 4")
+        if (mvdat.length%2) throw new Error("move data not a multiple of 4")
         if (mvdat.length/4 > (maxNesting+1)) throw new Error("too much move data")
         let i=0
         mvfn = function(){
-          oldClk([mvdat[i*4],mvdat[i*4+1]])
-          oldClk([mvdat[i*4+2],mvdat[i*4+3]])
-          if ((i+1)*4 < mvdat.length ) setTimeout(mvfn,1000)
+          oldClk(mvdat[i*2],mvdat[i*2+1])
+          i++
+          if (i*2 < mvdat.length ) setTimeout(mvfn,500)
         }
         mvfn()
-        move(arr.slice(1,3),(arr[3]==1)?"l":"r",true)
         break;
       case N_KICK:
         ws.close()
@@ -954,67 +1027,61 @@ if (false){//if(tag){
         console.log("incomprehensible message",arr)
     }
   }
-
+  let oldStartGame = startGame
+  startGame = function(variant){
+    if(!connected) connect(tag)
+    else{
+      oldStartGame(variant)
+    }
+  }
+  let oldEndTurn = endTurn
+  endTurn = function(){
+    if(myType-1===turn){
+      dat = [N_MOVE]
+      for(let st of state){
+        if(st[1]!=="promoting") dat.push(...st[2][0])
+        dat.push(...st[3][0])
+      }
+      ws.send(new Uint8Array(dat))
+    }
+    return oldEndTurn()
+  }
+  // let oldExecuteTurn = executeTurn
+  // executeTurn = function(){
+  //   if(myType-1===turn){
+  //     dat = [N_MOVE]
+  //     for(let st of state){
+  //       dat.push(...st[2][0])
+  //       dat.push(...st[3][0])
+  //     }
+  //     ws.send(new Uint8Array(dat))
+  //   }
+  //   return oldExecuteTurn()
+  //   /*
+  //   if(!nosend && !hasPriority())return false;
+  //   let result
+  //   if (result=oldMove([di,dj],player) ){
+  //     moveHistory.push(new Int8Array([N_MOVE,di,dj, (player=="l")?1:2 ]))
+  //     if(ws && !nosend)ws.send(moveHistory[moveHistory.length-1])
+  //     //if(result===true){connected=false;ws.close();ws=undefined}
+  //     return result;
+  //   }
+  //   return false*/
+  // }
+  if(oldClk)throw new Error("oldClk being redefined")
+  oldClk=clk
+  clk = function(x,y){
+    if(turn!==myType-1){
+      return
+    }
+    return oldClk(x,y)
+  }
   function startMultiplayerGame(N){
     MPGameRunning = true
     multiplayerSearch.classList.add("hidden")
-    startGame(N)
-    getPlayer = () => (myType===1)?"l":"r"
-    let oldExecuteTurn = executeTurn
-    executeTurn = function(){
-      if(myType-1===turn){
-        dat = [N_MOVE]
-        for(let st of state){
-          dat.push(...st[2][0])
-          dat.push(...st[3][0])
-        }
-        ws.send(new Uint8Array(dat))
-      }
-      return oldExecuteTurn()
-      /*
-      if(!nosend && !hasPriority())return false;
-      let result
-      if (result=oldMove([di,dj],player) ){
-        moveHistory.push(new Int8Array([N_MOVE,di,dj, (player=="l")?1:2 ]))
-        if(ws && !nosend)ws.send(moveHistory[moveHistory.length-1])
-        //if(result===true){connected=false;ws.close();ws=undefined}
-        return result;
-      }
-      return false*/
-    }
-    let oldClk=clk
-    clk = function(x,y){
-      if(turn!==myType-1){
-        return
-      }
-      return oldClk(x,y)
-    }
-    /*
-    endGame = function(reason){
-      MPGameRunning = false
-      oldEndGame(reason)
-      // don't close the socket until all buffered messages are sent.
-      let sock=ws
-      function clsws(){
-        if(sock.bufferedAmount>0){
-          console.log("Waiting to close socket", sock.bufferedAmount)
-          setTimeout(clsws, 10)
-        }else{
-          setTimeout(()=>sock.close(),100)
-        }
-      }
-      clsws()
-
-      connected=false
-    }
-    if(turn!=getPlayer()){// Fix the UI slightly
-        for (let k in toClear[turn]) if(k=="next" || k=="active"){
-          for(let n of toClear[turn][k]) n.classList.remove(k)
-        }
-    }
-    addPreMoves()
-    */
+    startGame(variants[N])
   }
+  connect(tag)
 
 }
 
