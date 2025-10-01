@@ -10,6 +10,11 @@
   -->
 <title> Half Chess Chess (awaiting a better name) </title>
 <style type="text/css">
+
+body {
+  background-color: gray;
+}
+
 svg.ref{/*hide the referenced svgs*/
   width: 0px;
   height:0px;
@@ -20,14 +25,11 @@ svg#main{
   top:0px;
   left:0px;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   border:0px;
   padding:0px;
   margin:0px;
   box-sizing:border-box;
-}
-body{
-  background-color: gray;
 }
 .board.animate{
   transition-property: transform;
@@ -48,6 +50,9 @@ text{
 }
 .hidden{
   display: none;
+}
+.dragging{
+  pointer-events: none;
 }
 #gameover , #multiplayerSearch{
   position:absolute;
@@ -293,7 +298,7 @@ class Pawn extends Piece{
     }
   }
   promote(become){
-    Object.setPrototypeOf(this,become)
+    Object.setPrototypeOf(this,become) // WARNING: said to make everything slow
   }
 }
 Pawn.prototype.charstr="♙♟︎"
@@ -702,6 +707,17 @@ function combineBoardsAndDraw(sb1,sb2){
   return comb
 }
 let log = []
+function deselect(){
+  let st = state[state.length-1]
+  if(st[1]!=="selected") throw Error("trying to deselect when not selected")
+  let p = st[2][1]
+  let gm = st[0]
+  gm[st[2][0]].cell.classList.remove("source")
+  for(let mv of p.getMoves(st[2][0],gm)){
+    gm[mv[0]].cell.classList.remove("highlight")
+  }
+  st.splice(1,2,"unselected")
+}
 function clk(x,y){
   log.push([x,y])
   let nesting = state.length-1
@@ -710,18 +726,6 @@ function clk(x,y){
   let gm = st[0]
   let cell = gm[[x,y]].cell
   switch (st[1]){
-      case "unselected":
-        for(let p of gm[[x,y]]){
-          if(p.col == turn && !p.isVirtual){
-            cell.classList.add("source")
-            for(let mv of p.getMoves([x,y],gm)){
-              gm[mv[0]].cell.classList.add("highlight")
-            }
-            st.splice(1,1,"selected",[[x,y],p])
-            break;
-          }
-        }
-        break;
       case "selected":
         if (cell.classList.contains("highlight")){
           let [src,p] = st[2]
@@ -738,6 +742,21 @@ function clk(x,y){
             st[1]="subgame"
             state.push([combineBoardsAndDraw(p.creator.subBoard,tgt[1].creator.subBoard),"unselected"])
           }
+          break;
+        }
+        else{
+          deselect()
+        }
+      case "unselected":
+        for(let p of gm[[x,y]]){
+          if(p.col == turn && !p.isVirtual){
+            cell.classList.add("source")
+            for(let mv of p.getMoves([x,y],gm)){
+              gm[mv[0]].cell.classList.add("highlight")
+            }
+            st.splice(1,1,"selected",[[x,y],p])
+            break;
+          }
         }
         break;
       case "promoting":
@@ -749,26 +768,67 @@ function clk(x,y){
     }
 }
 
+let dragging,draghome,dragref
+function startDragging(p,mouse){
+  dragging = p.pic
+  draghome = dragging.nextElementSibling
+  main.appendChild(dragging)
+  dragref = dragging.getCTM()
+  let w = draghome.previousElementSibling.getAttribute("width")
+  dragref.e+=(w*dragref.a)/2
+  console.log(w/dragref.a)
+  dragref.f+=(w*dragref.d)/2
+  dragging.classList.add("dragging")
+  dragTo(mouse)
+  //dragging.setAttribute(transform,)
+}
+function dragTo(mouse){
+  dragging.setAttribute("transform",`translate(${(mouse.x-dragref.e)/dragref.a},${(mouse.y-dragref.f)/dragref.d})`)
+}
+function stopDragging(){
+  if(!dragging) {return}
+  draghome.parentElement.insertBefore(dragging,draghome)
+  dragging.setAttribute("transform","")
+  dragging.classList.remove("dragging")
+  dragging=undefined
+}
 function addHandlers(cell,x,y,nesting){
   cell.addEventListener("click",e=>{
-    if (nesting+1==state.length){
+    if (nesting+1==state.length && state[nesting][1]=="promoting"){
       clk(x,y)
     } 
   })
-  cell.addEventListener("mousedown",e=>{
+  cell.addEventListener("pointerdown",e=>{
+    console.log(e)
     if (nesting+1==state.length){
-      if(e.button===0 && state[nesting][1]=="unselected" )
-      clk(x,y)
+      if(e.button===0 && (state[nesting][1]=="unselected" || state[nesting][1]=="selected") ){
+        clk(x,y)
+        if(state[nesting][1]=="selected"){
+          startDragging(state[nesting][2][1],e)
+        }
+      }
     } 
   })
-  cell.addEventListener("mouseup",e=>{
-    if (nesting+1==state.length){
-      if(e.button===0 && state[nesting][1]=="selected" )
-      clk(x,y)
-    } 
+  cell.addEventListener("pointerup",e=>{
+    if(dragging){
+      stopDragging()
+      if (nesting+1==state.length){
+        if(e.button===0 && state[nesting][1]=="selected") 
+          clk(x,y)
+      }
+    }
+  })
+  cell.addEventListener("pointercancel",e=>{
+    if(dragging){
+      stopDragging()
+    }
   })
 }
-
+document.addEventListener("pointermove",(e)=>{
+  if(dragging){
+    dragTo(e)
+  }
+})
 </script>
 
   <!-- 
@@ -1031,6 +1091,8 @@ if (tag){
   startGame = function(variant){
     if(!connected) connect(tag)
     else{
+      MPGameRunning = true
+      multiplayerSearch.classList.add("hidden")
       oldStartGame(variant)
     }
   }
