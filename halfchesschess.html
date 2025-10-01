@@ -11,6 +11,8 @@
   50 move rule
   chess clock (It disconnects after about a minute; call that losing on time)
   performance (don't redraw everything every turn)
+  hide gaps between squares in chromium (adding small borders doesn't fix this; rendering each half board background once, then using that image might be the way to go)
+  think carefully about whether fast drag and drop should be supported on mobile (https://stackoverflow.com/a/4405541)
   -->
 <title> Half Chess Chess (awaiting a better name) </title>
 <style type="text/css">
@@ -34,17 +36,54 @@ svg#main{
   padding:0px;
   margin:0px;
   box-sizing:border-box;
+  touch-action:none;
 }
 .board.animate{
   transition-property: transform;
   transition-duration: 0.5s;
 }
-.board>g>g:where(g:nth-child(even)>g:nth-child(even), g:nth-child(odd)>g:nth-child(odd))>rect{
+.board>g>g:where(g:nth-child(even)>g:nth-child(even), g:nth-child(odd)>g:nth-child(odd)){
+  &>rect{
   fill:  hsl(30, 35%, 50%);
+  }
+  &:is(.lastmovesrc,.lastmovedst)>rect{
+    
+    fill: #8a5163;
+  }
+  &:is(.source)>rect{
+    fill:#e5e6a7;
+    &:is(.lastmovesrc,.lastmovedst)>rect{
+      fill:#975b5c;
+    }
+  }
+  
 }
-.board>g>g:where(g:nth-child(even)>g:nth-child(odd), g:nth-child(odd)>g:nth-child(even))>rect{
-  fill: hsl(40, 55%, 75%);
+.board>g>g:where(g:nth-child(even)>g:nth-child(odd), g:nth-child(odd)>g:nth-child(even)){
+  &>rect{
+    fill: hsl(40, 55%, 75%);
+  }
+  &:is(.lastmovesrc,.lastmovedst)>rect{
+    fill:  #b3848b;
+  }
+  &:is(.source)>rect{
+    fill:#a79550;
+    &:is(.lastmovesrc,.lastmovedst)>rect{
+      fill:#c2938c;
+    }
+  }
 }
+/*
+doing this with filters causes firefox to create gaps between squares
+chromium creates gaps between squares either way
+.board>g>g.lastmovesrc>rect{
+  filter:hue-rotate(-60deg) brightness(0.7);
+}
+.board>g>g.lastmovedst>rect{
+  filter:hue-rotate(-60deg) brightness(0.7);
+}
+.board>g>g.source>rect{
+  filter:hue-rotate(20deg) brightness(1.1);
+}*/
 text{
   font-size: 80;
   pointer-events: none;
@@ -70,15 +109,6 @@ text{
 
 .board>g>g>circle{
   fill:none;
-}
-.board>g>g.lastmovesrc>rect{
-  filter:hue-rotate(-60deg) brightness(0.7);
-}
-.board>g>g.lastmovedst>rect{
-  filter:hue-rotate(-60deg) brightness(0.7);
-}
-.board>g>g.source>rect{
-  filter:hue-rotate(20deg) brightness(1.1);
 }
 .board>g>g.highlight>circle{
   fill: green;
@@ -366,7 +396,8 @@ class King extends Leaper{
         }
       }
     }
-    return mvs.filter(p=>board.variant[this.col][p[0]]) // don't allow a king to move away from its half board
+    if(board===state[0][0]) return mvs // board is outermost
+    else return mvs.filter(p=>board.variant[this.col][p[0]]) // don't allow a king to move away from its half board
   }
   execute(src,board,tgt){
     let [x,y] = fromIx(src)
@@ -557,8 +588,8 @@ function drawBoard(board,depth){
         cell.setAttribute("transform",`translate(${left + x*sz},${top + (my-y)*sz})`)
 
         let rect = mkel("rect")
-        rect.setAttribute("width",sz)
-        rect.setAttribute("height",sz)
+        rect.setAttribute("width",sz+2)
+        rect.setAttribute("height",sz+2)
         cell.append(rect)
         if(depth===0) addHandlers(cell,x,y,depth)
 
@@ -702,7 +733,8 @@ function combineBoardsAndDraw(sb1,sb2){
     ;d.offsetWidth;
     setTimeout(()=>{
       d.classList.add("animate")
-      tList.getItem(0).setMatrix(tList.createSVGTransformFromMatrix({a:1,b:0,c:0,d:1}))
+      // Note that willingness to accept DOMMatrix as an SVGMatrix differs between firefox and chromium
+      tList.getItem(0).setMatrix(main.createSVGMatrix())
     },0)
     for (let k of Object.keys(sb)){
       if(k.includes(",")) addHandlers(sb[k].cell,...fromIx(k) ,state.length)
@@ -726,7 +758,7 @@ function clk(x,y){
   //log.push([x,y])
   let nesting = state.length-1
   let st = state[nesting]
-  console.log("click",st)
+  console.log("click",x,y,st)
   let gm = st[0]
   let cell = gm[[x,y]].cell
   switch (st[1]){
@@ -799,22 +831,26 @@ function stopDragging(){
 }
 function addHandlers(cell,x,y,nesting){
   cell.addEventListener("click",e=>{
+    console.log("cl",e.target)
     if (nesting+1==state.length && state[nesting][1]=="promoting"){
       clk(x,y)
     } 
   })
   cell.addEventListener("pointerdown",e=>{
+    console.log("pd",e.target,e.x,e.y)
     console.log(e)
     if (nesting+1==state.length){
-      if(e.button===0 && (state[nesting][1]=="unselected" || state[nesting][1]=="selected") ){
+      if(e.button===0 && e.isPrimary && (state[nesting][1]=="unselected" || state[nesting][1]=="selected") ){
         clk(x,y)
         if(state[nesting] && state[nesting][1]=="selected"){
           startDragging(state[nesting][2][1],e)
         }
       }
-    } 
+    }
   })
   cell.addEventListener("pointerup",e=>{
+    console.log("pu",e.target,e.x,e.y)
+    console.log(e)
     if(dragging){
       stopDragging()
       if (nesting+1==state.length){
@@ -830,10 +866,17 @@ function addHandlers(cell,x,y,nesting){
   })
 }
 document.addEventListener("pointermove",(e)=>{
+  //console.log("mv",e.x,e.y)
   if(dragging){
     dragTo(e)
   }
+  if(!e.isPrimary && state[state.length-1][1]==="selected"){
+    deselect()
+    if(dragging) stopDragging()
+  }
 })
+document.addEventListener("pointerup",stopDragging)
+document.addEventListener("pointercancel",stopDragging)
 </script>
 
   <!-- 
