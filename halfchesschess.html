@@ -6,6 +6,8 @@
   // better "change your mind" features
   not going funny on mobile
   correspondence games
+  //improve logs
+      show logs
   50 move rule
   chess clock (It disconnects after about a minute; call that losing on time)
   performance (don't redraw everything every turn)
@@ -613,6 +615,11 @@ function resetTurn(ended){
   drawAll()
 }
 function endTurn(){
+  try{
+    log.push(state.flatMap(st=>st[1]=="promoting"?[st[3][0]]:[st[2][0],st[3][0]]))
+  }catch(err){
+    console.error("failed to append to log",state)
+  }
   turn=1-turn
   resetTurn(true)
 }
@@ -660,12 +667,17 @@ function drawPromotion(col){
 pawnlog = [[3,1],[3,3],[2,4],[3,3],[2,4],[2,3],[3,3],[2,4],[1,1],[1,2],[1,4],[1,3],[3,3],[2,4],[2,0],[0,2],[2,5],[0,3],[3,3],[2,4],[0,2],[3,5],[1,3],[1,3],[1,3],[1,2],[2,5],[2,5],[2,4],[2,4],[2,4],[2,5]]
 promotelog = [[3,1],[3,3],[2,4],[3,3],[2,4],[2,3],[3,3],[2,4],[1,1],[1,2],[1,4],[1,3],[3,3],[2,4],[2,0],[0,2],[2,5],[0,3],[3,3],[2,4],[0,2],[3,5],[1,3],[1,3],[1,2],[2,5],[2,5],[2,4],[2,4],[2,4],[2,5],[0,0]]
 
+function pl(l){
+  return "["+l.join("],[")+"]"
+}
+
 function printlog(lg) {
   if (lg===undefined) lg=log
-  return "[["+lg.join("],[")+"]]" 
+  return "["+pl(lg.map(pl))+"]" 
 }
 async function replaylog(log,timing=500){
-  for (let xy of log){
+  for (let move of log)
+  for (let xy of move){
     clk(...xy)
     await new Promise(r => setTimeout(r, timing));
   }
@@ -711,7 +723,7 @@ function deselect(){
   st.splice(1,2,"unselected")
 }
 function clk(x,y){
-  log.push([x,y])
+  //log.push([x,y])
   let nesting = state.length-1
   let st = state[nesting]
   console.log("click",st)
