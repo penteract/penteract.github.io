@@ -176,7 +176,7 @@ function partToMatrix(p){
   <!--
 <button onclick="prevChallenge()">Previous Challenge</button> -->
 <button onclick="resetChallenge(true)">Reset Challenge</button>
-How Far from a solution: <span id="distance" style="display:inline-block;width:60px;">?</span>
+Distance from solution: <span id="distance" style="display:inline-block;width:60px;">?</span>
 <button id="nextChallengeButton" onclick="nextChallenge()">Next Challenge</button>
 <br>
 Hints: <span id="hinttext"></span>
@@ -541,7 +541,7 @@ let carefulDrawCount = 100000
 function drawCarefully(){
   clearTimeout(keyboardTimeout)
   conts = drawFractal(carefulDrawCount,true)
-  if(challengeCount<=challengeNum) checkAnswer(conts)
+  checkAnswer(conts)
   //console.log(calcDim(conts))
 }
 document.addEventListener("pointerup",pointerEnd)
@@ -792,7 +792,7 @@ let challenges = [
   , thresholdFactor : 10
   },
   {
-    target:[{x:0.6666666666666666,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:585},{x:0.3333333333333333,y:0.5,w:-0.7071067811865475,h:-0.7071067811865475,rot:585}]
+    target: [{x:0.2916666666666667,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:495},{x:0.5833333333333334,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:585}]
   , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
   , hints : ["These parts each have half the area of the full square, allowing for some interesting patterns with solid areas.",
            "Can you see a way to make the red triangle out of 2 copies of itself? How much do they need to be rotated by?",
@@ -829,7 +829,7 @@ let challenges = [
   {
     target : [{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.625,y:0.4166666666666667,w:0.5,h:0.5,rot:0}]
   , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.6666666666666666,y:0.5,w:0.5,h:0.5,rot:0}]
-  , hints : ["Try Deleting a part using the Del key.",
+  , hints : ["Try deleting a part using the Delete key or the 'Delete Part' button below.",
     "Reset the challenge if you're stuck. This one can be solved by deleting a single part and then moving parts until the white line matches the red line"
   ]
   , name : "Delete"
