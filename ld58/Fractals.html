@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Fractals</title>
+<title>Fractal Collector</title>
 <style>
 /*@media(prefers-color-scheme: dark){ (the dark version just looks better) */
 button{
@@ -9,6 +9,7 @@ button{
   margin-top: 2px;
 }
 button{
+  font-size: large;
   color:white;
   background: black;
   box-shadow: 0 0 2px  white;
@@ -63,7 +64,7 @@ body,.part,#boxui{
 }
 .part{
   width:500px;height:500px;
-  background:#FFF2;
+  background:#eee4;
   transform-origin:top left;
 }
 .part,#boxui{
@@ -85,8 +86,11 @@ svg{
 circle{
   pointer-events: all;
   fill:#40a040;
-  r:5px;
+  r:8px;
   touch-action: none;
+}
+circle.rot{
+  fill:#5050f0;
 }
 @media (pointer:coarse) {
   circle{
@@ -171,25 +175,26 @@ function partToMatrix(p){
 <div style="margin-left:8px">
   <!--
 <button onclick="prevChallenge()">Previous Challenge</button> -->
-<button onclick="resetChallenge()">Reset Challenge</button>
-Distance: <span id="distance" style="display:inline-block;width:60px;">?</span>
+<button onclick="resetChallenge(true)">Reset Challenge</button>
+How Far from a solution: <span id="distance" style="display:inline-block;width:60px;">?</span>
 <button id="nextChallengeButton" onclick="nextChallenge()">Next Challenge</button>
 <br>
 Hints: <span id="hinttext"></span>
-<span id="nextHintBut"><br><button onclick="addHint()">More Hints</button></div>
+<span id="nextHintSpan"><br><button id="nextHintBut" onclick="addHint()">More Hints</button></span>
+<span id="showSolution" class="hidden"><br><button id="showSolBut" onclick="showSol()">Show solution</button></span></div>
 <br>
-<button onclick="newpart()">Create part</button> <button onclick="deletepart(selected)">Delete part</button> <button onclick="saveImage()">Save Fractal</button>
+<button onclick="newpart();drawCarefully()">Create part</button> <button onclick="deletepart(selected)">Delete part</button> <button onclick="saveImage()">Save Fractal</button>
 <br>
 <div id="sidediv">
 </div>
 <fieldset>
   <legend>Control configuration</legend>
-snap: <input type="checkbox" id="snappositions" name="snappositions" checked="true"><label for="snappositions">positions</label>
-<input type="checkbox" id="snapsizes" name="snapsizes" checked="true"><label for="snapsizes">sizes</label>
-<input type="checkbox" id="snaprotations" name="snaprotations" checked="true"><label for="snaprotations">rotation</label>
+snap: <input type="checkbox" id="snappositions" name="snappositions" checked="false"><label for="snappositions">positions</label>
+<input type="checkbox" id="snapsizes" name="snapsizes" checked="false"><label for="snapsizes">sizes</label>
+<input type="checkbox" id="snaprotations" name="snaprotations" checked="false"><label for="snaprotations">rotation</label>
 <br>
 <input type="checkbox" id="match" name="match" checked="true"><label for="match">match width and height (keep parts square)</label><br>
-<input type="checkbox" id="center" name="center" checked="true"><label for="center">resize around center </label>
+<input type="checkbox" id="center" name="center" checked="false"><label for="center">resize around center </label>
 </fieldset>
 <!-- TODO:  -->
 <!--<fieldset>
@@ -206,6 +211,7 @@ snap: <input type="checkbox" id="snappositions" name="snappositions" checked="tr
   <li>Delete: Remove selected part</li>
 </ul>
 </div>
+<button id="resetProgress" onclick="resetProgress()">Reset All Challenge Progress</button> (not the same as Reset Challenge above, which resets current challenge)
 </div>
 <div id="config">
 </div>
@@ -380,8 +386,13 @@ function drawBox(part){
     let c = mksvgel("circle")
     part[[dx,dy]]=c
     if(dx*dy==1) c.style.cursor="nwse-resize"
-    else if(dx*dy==-1) c.style.cursor="nesw-resize"
-    else if (!(dx||dy)) c.style.cursor="grab"
+    else if(dx*dy==-1){
+      c.style.cursor="nesw-resize"
+    }
+    else if (!(dx||dy)) {
+      c.style.cursor="grab"
+      c.classList.add("rot")
+    }
     else if (dx==0) c.style.cursor="ns-resize"
     else if (dy==0) c.style.cursor="ew-resize"
     c.addEventListener("pointerdown",()=>moveAction=chooseResize(dx,dy,part))
@@ -530,7 +541,7 @@ let carefulDrawCount = 100000
 function drawCarefully(){
   clearTimeout(keyboardTimeout)
   conts = drawFractal(carefulDrawCount,true)
-  checkAnswer(conts)
+  if(challengeCount<=challengeNum) checkAnswer(conts)
   //console.log(calcDim(conts))
 }
 document.addEventListener("pointerup",pointerEnd)
@@ -638,7 +649,7 @@ function saveImage(){
 function mkSideCanvas(pts,quick){// assumes pts is never mutated
   let op=parts
   parts=pts
-  drawFractal(quick?carefulDrawCount/saved.length:carefulDrawCount)
+  drawFractal(quick?(carefulDrawCount*2)/(saved.length+1):carefulDrawCount)
   let newCanvas = document.createElement("canvas")
   newCanvas.width=100
   newCanvas.height=100
@@ -660,7 +671,8 @@ for(let im of saved){
 function resetParts(){
   drawPartdivs(parts)
   selectPart(parts[0])
-  drawFractal(10000)
+  drawCarefully()
+  //drawFractal(10000)
 }
 //resetParts()
 // saveImage()
@@ -723,93 +735,169 @@ ctx2.strokeStyle="#FFF"
 ctx2.fillStyle="#F00"
 ctx2.strokeRect(ox,oy,w,h)
 
+const allowed = {
+  move:true,
+  rotate:false,
+  
+}
+
+
 let challenges = [
   {
     target : [{x:0.5,y:0.33333333333333337,w:0.5,h:0.5,rot:360},{x:0.33333333333333337,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.7071067811865475,y:0.6666666666666667,w:0.5,h:0.5,rot:0}]
     /* [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]*/
   , init : [{x:0.25,y:0.25,w:0.5,h:0.5,rot:360},{x:0.2916666666666667,y:0.7083333333333334,w:0.5,h:0.5,rot:0},{x:0.7083333333333334,y:0.7083333333333334,w:0.5,h:0.5,rot:0}]
   /*[{x:0.25,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]*/
-  , hints : ["Move the parts around using the mouse or arrow keys"]
+  , hints : ["Move the parts around using the mouse or arrow keys",
+    "Reset the challenge if you're stuck. For this one, you only need to move the grey squares around which you can do by dragging the middle of them"
+  ]
   , name : "Movement"
   },
   {
-    target : [{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.625,y:0.4166666666666667,w:0.5,h:0.5,rot:0}]
-  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
-  , hints : ["It's just a line. Deleting a part using the Del key or the button below might be helpful."]
-  , name : "Delete"
+    target : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.25,y:0.25,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.5,w:0.5,h:0.5,rot:0}]
+  , hints : ["A square can be formed out of 4 smaller squares, one in each corner.",
+      "Reset the challenge if you're stuck. This can be solved by moving the part in the middle into the top left corner"
+  ]
+  , name : "Solid square" 
+  , thresholdFactor : 10
   },
   {
-    target : [{x:0.75,y:0.8333333333333334,w:0.25,h:0.25,rot:360},{x:0.6666666666666667,y:0.33333333333333337,w:0.6666666666666666,h:0.6666666666666666,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:0}]
-  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
-  , hints : ["Try making parts bigger/smaller using the side/corner handles."]
-  , name : "Resize"
-  },
-  {
-    target : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.625,w:0.25,h:0.25,rot:0}]
-  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
-  , hints : ["Looks like something's missing. Create a new part using the buttons below and modify it appropriately."]
-  , name : "Create"
+    target : [{x:0.6666666666666666,y:0.375,w:0.5,h:0.5,rot:360},{x:0.3333333333333333,y:0.625,w:0.5,h:0.5,rot:0},{x:0.625,y:0.6666666666666666,w:0.5,h:0.5,rot:0},{x:0.375,y:0.3333333333333333,w:0.5,h:0.5,rot:0}]
+  , init :[{x:0.625,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.625,w:0.5,h:0.5,rot:0},{x:0.2916666666666667,y:0.4583333333333333,w:0.5,h:0.5,rot:0}]
+  , hints : ["Here's a smaller square. You don't need to rotate or resize any of the parts for this challenge.",
+      "Reset the challenge if you're stuck. This can be solved without doing anything except moving the parts. Try and use each part to get a different corner of the square in the right places"
+  ]
+  , name : "smaller square" 
+  , thresholdFactor : 10
   },
   {
     target : [{x:0.25,y:0.75,w:0.5,h:0.5,rot:90},{x:0.75,y:0.75,w:0.5,h:0.5,rot:360},{x:0.75,y:0.25,w:0.5,h:0.5,rot:270}]
   , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
-  , hints : ["Parts can be rotated using the top handle or Q/E on the keyboard. Try rotating the bottom left and top parts by 90 degrees each."]
+  , hints : ["Parts can be rotated using the top handle (the blue circle which appears above a part when you click on it) or Q/E on the keyboard.",
+      "Reset the challenge if you're stuck. Rotate the bottom left part by 90 degrees clockwise and"+
+      " the top right part by 90 degrees clockwise."]
   , name : "Rotation"
   },
   {
-    target:[{x:0.6666666666666666,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:585},{x:0.3333333333333333,y:0.5,w:-0.7071067811865475,h:-0.7071067811865475,rot:585}]
-  , init : [{x:0.625,y:0.625,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.625,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
-  , hints : ["These parts each have half the area of the full square, allowing for some interesting patterns with solid areas.",
-           "Could you fit a smaller copy of the target shape into itself?",
-           "Try rotating both parts by 45 degrees."]
-  , name : "Twin Dragon" 
-  },
-  {
-    target : [{x:0.6666666666666667,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:405},{x:0.33333333333333337,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:315}]
-  , init : [{x:0.625,y:0.625,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.625,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
-  , hints : ["Can you see smaller copies of the target shape within it?",
-            "Try rotating the parts by 45 degrees in different directions."]
-  , name : "Lévy Dragon" 
-  },
-
-  {
-    target : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:630},{x:0.25,y:0.75,w:0.5,h:0.5,rot:450},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.25,y:0.25,w:0.5,h:0.5,rot:0}]
-  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
-  , hints : ["It's just a solid square",
-    "How might you divide a square into 4 smaller squares?",
-    "try putting a 1/4 sized square in each corner"
-  ]
-  , name : "Solid Square" 
-  , thresholdFactor : 10
-  },
-  {
     target :[{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.75,w:0.5,h:0.5,rot:540}]
-  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.5,w:0.5,h:0.5,rot:0}]
   , hints : [
-    "This time a triangle",
+    "Now for a solid triangle.",
     "Like with a square, you can make a triangle out of 4 smaller ones",
-    "One of the 4 copies needs to be upsidedown"
+    "One of the 4 copies needs to be upsidedown",
+    "Reset the challenge if you're stuck. Rotate one copy by 180 degrees, nothing needs to be resized"
   ]
   , name : "Solid Triangle" 
   , thresholdFactor : 10
   },
   {
+    target:[{x:0.6666666666666666,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:585},{x:0.3333333333333333,y:0.5,w:-0.7071067811865475,h:-0.7071067811865475,rot:585}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["These parts each have half the area of the full square, allowing for some interesting patterns with solid areas.",
+           "Can you see a way to make the red triangle out of 2 copies of itself? How much do they need to be rotated by?",
+           "Try rotating both parts by 135 degrees in opposite directions (3/8ths of a full circle). Reset the challenge if you're stuck.",
+           "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Right Isoceles triangle"
+  },
+  {
+    target:[{x:0.6666666666666666,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:585},{x:0.3333333333333333,y:0.5,w:-0.7071067811865475,h:-0.7071067811865475,rot:585}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Now we move onto some dragons",
+           "Could you fit a smaller copy of the target shape into itself? You'll need to rotate something.",
+           "Try rotating both parts by 45 degrees clockwise. Reset the challenge if you're stuck.",
+           "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Twin Dragon" 
+  },
+  {
+    target : [{x:0.6666666666666667,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:405},{x:0.33333333333333337,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:315}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Can you see how copies of the target shape could fit within it?",
+            "Try rotating the parts by 45 degrees in different directions. Reset the challenge if you're stuck.",
+            "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Lévy Dragon" 
+  },
+  {
+    target : [{x:0.75,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:495},{x:0.4166666666666667,y:0.6666666666666666,w:0.7071067811865475,h:0.7071067811865475,rot:405}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Can you see smaller copies of the target shape within it?",
+            "Try rotating the parts by 45 degrees and 135 degrees. Reset the challenge if you're stuck.",
+            "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Heighway Dragon" 
+  },
+
+  {
+    target : [{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.625,y:0.4166666666666667,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.6666666666666666,y:0.5,w:0.5,h:0.5,rot:0}]
+  , hints : ["Try Deleting a part using the Del key.",
+    "Reset the challenge if you're stuck. This one can be solved by deleting a single part and then moving parts until the white line matches the red line"
+  ]
+  , name : "Delete"
+  },
+  {
+    target : [{x:0.8333333333333334,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:-0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360}]
+    //[{x:0.75,y:0.8333333333333334,w:0.25,h:0.25,rot:360},{x:0.6666666666666667,y:0.33333333333333337,w:0.6666666666666666,h:0.6666666666666666,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:0}]
+  , init : [{x:0.75,y:0.75,w:0.5,h:0.5,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:-0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.25,w:0.5,h:0.5,rot:360}]
+  // [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["Try making parts bigger/smaller using the side/corner handles (green circles).",
+    "Reset the challenge if you're stuck. This one can be solved by making one of the parts bigger and three of them smaller."
+  ]
+  , name : "Resize"
+  },
+
+  {
+    target : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:630},{x:0.25,y:0.75,w:0.5,h:0.5,rot:450},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.25,y:0.25,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["A square again. Create a new part using the button below and put it in the gap.",
+      "Reset the challenge if you're stuck. This can be solved by creating a new part and moving it into the top left corner"
+  ]
+  , name : "Create" 
+  , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.625,w:0.25,h:0.25,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["Looks like something's missing. Create a new part using the button below and modify it appropriately.",
+    "If you've got something that covers some of the solution, but not all of it, look for the largest red piece which could be covered by a copy of the whole thing, then create a part which makes something that covers that",
+    "Reset the challenge if you're stuck. This one can be solved by creating a part, making it a bit smaller, and putting it in the middle"
+  ]
+  , name : "Sierpiński Plus"
+  },
+  {
+    target : [{x:0.5,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.8333333333333334,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.5,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.16666666666666666,y:0.5,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.16666666666666666,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.5,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["You'll need to make a few new pieces for this one"]
+  , name : "Sierpiński carpet"
+  },
+  
+  {
     target :[{x:0.6666666666666666,y:0.4166666666666667,w:0.7071067811865475,h:0.7071067811865475,rot:450},{x:0.375,y:0.5416666666666666,w:0.7071067811865475,h:0.7071067811865475,rot:450}]
   , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
   , hints : [
-    "This could be done just like the square",
-    "But there's a way to use fewer part: this rectangle has the same aspect ratio as a piece of A4 paper",
-    "If you cut a piece of A4 paper in half, you get 2 A5 pieces with the same aspect ratio as the original",
-    "The smaller pieces need to be rotated 90 degrees to look the same"
+    "You are expected to create or delete a part for this challenge",
+    "This could be done like the square, with 4 squares of the ",
+    "But there's a way to use fewer parts: this rectangle has the same aspect ratio as a piece of A4 paper.",
+    "If you cut a piece of A4 paper in half, you get 2 A5 pieces with the same aspect ratio as the original.",
+    "The short edges of the A5 sheet form the long edges of the A4 sheet, so both parts need a 90 degree rotation",
+    "Make sure the parts have sides that are 1/√2 of the full square. Some of the earlier challenges used squares that size, so clicking a saved fractal to load it might help"
   ]
   , name : "Solid Rectangle"
   , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.5416666666666666,y:0.375,w:-0.75,h:0.75,rot:360.9338669250746},{x:0.6666666666666666,y:0.7083333333333334,w:0.5833333333333334,h:0.5833333333333334,rot:396.69768666306084}]
+  , init : [{x:0.6666666666666666,y:0.625,w:0.5,h:0.5,rot:360},{x:0.4583333333333333,y:0.4166666666666667,w:0.5,h:0.5,rot:360}]
+  , hints : [ "What a pretty fern",
+    "you'll need to resize parts for this",
+    "A piece can become a scaled reflection of the whole thing if you drag one of the side handles to give it a negative width or height"
+  ]
+  , name : "Fern"
   },
   /*
   {
     target : 
   , init : 
-  , hint : 
+  , hints : 
   , name : 
   },
   */
@@ -817,7 +905,7 @@ let challenges = [
   {
     target : 
   , init : 
-  , hint : 
+  , hints : 
   , name : 
   },
   */
@@ -825,20 +913,22 @@ let challenges = [
 
 function checkAnswer(r){
   if(targetset){
-    let d = setDist(targetset,r)
+    let d = setDist(targetset,r)*thresholdFactorg
     distance.innerText=d.toFixed(2)
     distance.className=d>100?"nowhere":d>10?"bad":d>1?"near":d>0.1?"good":"exellent"
     if (d<=1 && challengeNum==challengeCount){
       challengeCount+=1
       localStorage.setItem("challengeCount",challengeCount)
-      if(challengeCount==challenges.length){
+      if(challengeNum+1==challenges.length){
         alert("Congratulations, you've completed all the challenges, enjoy playing freestyle")
         console.log("TODO: hide challenge related ui")
+        saveImage()
         refPic.classList.add("hidden")
       }
       else if(confirm("Congratualtions, Challenge complete (distance "+d.toFixed(3)+").\n Save this fractal and continue to the next challenge?")){
+        challengeNum+=1
         saveImage()
-        nextChallenge()
+        resetChallenge()
       }
       else{
         nextChallengeButton.classList.remove("hidden")
@@ -846,10 +936,12 @@ function checkAnswer(r){
     }
   }
 }
+let targetParts
 function setTarget(parts){
   refPic.classList.remove("hidden")
   refPic.width|=0
   ctx2.fillStyle="#F00"
+  targetParts = parts
   targetset = drawFractalAt(parts,ctx2,carefulDrawCount,true)
 }
 let curHints=[]
@@ -860,20 +952,35 @@ function setHints(hints){
   numHintsShown=0
   if(hints.length>0)addHint()
 }
+function showSol(){
+  parts = copyparts(targetParts)
+  challengeCount=challengeNum+1
+  nextChallengeButton.classList.remove("hidden")
+  showSolution.classList.add("hidden")
+  resetParts()
+}
 function addHint(){
   hinttext.innerHTML+="<BR>"+curHints[numHintsShown++]
-  if (numHintsShown<curHints.length){nextHintBut.classList.remove("hidden")}
-  else{nextHintBut.classList.add("hidden")}
+  if (numHintsShown<curHints.length){
+    nextHintSpan.classList.remove("hidden")
+    showSolution.classList.add("hidden")
+  }
+  else{
+    nextHintSpan.classList.add("hidden")
+    showSolution.classList.remove("hidden")
+  }
 }
-function startChallenge(c){
-  nextChallengeButton.classList.add("hidden")
-  let {target,init,hints} = c
+let thresholdFactorg=1
+function startChallenge(c,keephints){
+  if(challengeCount<=challengeNum) nextChallengeButton.classList.add("hidden")
+  let {target,init,hints,thresholdFactor} = c
+  thresholdFactorg=thresholdFactor??1
   setTarget(target)
   // targetset = drawFractalAt(target,ctx2,carefulDrawCount,true)
   parts = copyparts(init)
   resetParts()
   drawCarefully()
-  setHints(hints)
+  if(!keephints) {setHints(hints)}
 }
 let challengeCount= +localStorage.getItem("challengeCount") // completed challenges
 let challengeNum = challengeCount
@@ -885,9 +992,20 @@ function nextChallenge(){
     resetChallenge()
     //startChallenge(challenges[])
   }
+  else{
+    alert("You're at the end of the challenges, enjoy making whatever fractals you want")
+    console.log("TODO: hide challenge related ui")
+    refPic.classList.add("hidden")
+  }
 }
-function resetChallenge(){
-  startChallenge(challenges[challengeNum])
+function resetChallenge(keephints){
+  startChallenge(challenges[challengeNum],keephints)
+}
+function resetProgress(){
+  challengeCount=0
+  challengeNum=0
+  resetChallenge()
+  localStorage.setItem("challengeCount",challengeCount)
 }
 </script>
 </body>
