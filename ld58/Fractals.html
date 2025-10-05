@@ -201,15 +201,44 @@ snap: <input type="checkbox" id="snappositions" name="snappositions" checked="fa
   
   <input type="radio" >
 </fieldset>-->
-<h2>Controls:</h2>
+
+<h2 >Goal</h2>
+<p>Get the white shape to match the red shape behind it and add the fractal to your collection.</p>
+<h2 >Rules</h2>
+<p>The white picture is made out of parts (the partially transparent grey squares) which describe how to make the picture as transformed copies of whatever is in the square.</p>
+<h2 >Controls</h2>
+<h3 >Mouse</h3>
 <ul>
-  <li>Mouse: Select, move, resize and rotate part</li>
-  <li>Tab or N: Cycle through parts</li>
-  <li>Arrow Keys or wasd: Move selected part</li>
-  <li>q/e: Rotate selected left/right</li>
-  <li>Space: redraw with detail</li>
-  <li>Delete: Remove selected part</li>
+<li>Click: Select part </li>
+<li>Drag blue circle: rotate part</li>
+<li>Drag handles (green circles around a selected part): resize part</li>
+<li>Drag (anywhere in part except the circles): move part</li>
+<li>Buttons to create and delete parts</li>
+<li>Button to reset a challenge</li>
+<li>Button to save a fractal</li>
+<li>Click on a fractal saved in collection to admire it again at full size.</li>
+<li>Button to see more hints / get the solution</li>
+<li>Flashing button to advance to the next challenge if you&#39;ve completed it</li>
 </ul>
+<h3 >Keyboard (optional)</h3>
+<ul>
+<li>Tab or n: Cycle through parts</li>
+<li>Arrow Keys or wasd: Move selected part</li>
+<li>q/e: Rotate selected left/right</li>
+<li>Space: redraw with detail</li>
+<li>Delete: Remove selected part</li>
+</ul>
+<h2 >Strategy</h2>
+<p>Try to work out how the red shape could be made out of copies of itself (e.g. a square can be made by putting 4 smaller squares together).</p>
+<p>Create as many parts as you need copies (most challenges have the right number of parts to start with).</p>
+<p>If the copies should be rotated relative to the original, then rotate the parts.</p>
+<p>Position the parts so that the picture looks right.</p>
+<h2>Control Configuration</h2>
+<p>There are some checkboxes that affect the controls by putting restrictions how and where things move (e.g. making rotations snap to the nearest multiple of 15 degrees). Free movement is a bit more useful for getting the hang of things, but these make it much easier to neaten things up.</p>
+<p>It should be possible to complete every challenge with any combination of checkboxes being checked.</p>
+<h2 >Hints</h2>
+<p>See the strategy section above and read the per-level hints. Don&#39;t be hesitant to click the &quot;More hints&quot; button when it's available, particularly on the early levels where you&#39;re supposed to get the hang of the controls and how the game works. The first levels don&#39;t need anything except movement, then rotation. The hints will tell you when a new kind of manipulation is needed.</p>
+
 </div>
 <button id="resetProgress" onclick="resetProgress()">Reset All Challenge Progress</button> (not the same as Reset Challenge above, which resets current challenge)
 </div>
