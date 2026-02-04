@@ -1,34 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Projects</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects</title>
+  <style>
+h3{
+  margin-bottom:10px;
+}
+body{
+  max-width: 600px;
+}
+img{
+  float:right;
+}
+  </style>
 </head>
 <body>
 <h1>Projects</h1>
+<h3>Miscellaneous</h3>
 <ul>
-    <li><a href="pythagTree.html">Area of the Pythagoras Tree</a> Previously unknown</li>
-    <li><a href="https://github.com/penteract/pythagTreeProof">Formal Proof of the Area of the Pythagoras Tree</a> </li>
-    <li><a href="https://observablehq.com/@penteract/a-space-filling-curve">A space filling curve</a> Resolved a conjecture I'd wondered about for ~7 years</li>
-    <br>
-    <li><a href="https://github.com/penteract/animated-octo-dangerzone">Boustrophedon browser extenstion</a></li>
-    
-    <li><a href="typeblocks/svg/typeblocks.html">TypeBlocks</a> Draggable blocks with higher-order types. Haskell flavor Scratch. Proof of concept. </li>
-    <li>Bartok (<a href="https://github.com/penteract/Bartok">source</a>) A multiplayer card game in which you may add rules when you win (by writing them in Haskell).</li>
-    <br>
-    <li><a href="https://ldjam.com/users/tesseract/games">Ludum Dare</a> <ol>
-        <li><a href="https://ldjam.com/events/ludum-dare/46/imojc">IMOJC</a> Massively multiplayer game of life (A further experiment in how (not) to write C networking code)</li>
-        <li><a href="https://ldjam.com/events/ludum-dare/47/brainstuck">Brainstuck</a> Puzzle game based on a well known esoteric programming language.</li>
-        <li><a href="https://ldjam.com/events/ludum-dare/49/4d-jenga">4D Jenga</a> </li>
-    </ol></li>
-    <li><a href="https://github.com/penteract/cwmtt/blob/master/Game/Chess/TimeTravel/FastCheckmate.lhs">Hypercuboid Search</a> The only known algorithm for checkmate detection in 5D chess with multiverse timetravel that finishes in a reasonable amount of time (<1 second) on all tested inputs. </li>
-    <li><a href="https://entanglement-chess.netlify.app/">Entanglement Chess</a> (<a href="https://gitlab.com/alexbay218/entanglement-chess">source</a>) I am responsible for a correct and efficient algorithm (and implementation of said algorithm) to determine which moves are legal.</li>
-    <li><a href="http://3dox.uk/">Set</a> Multiplayer Set game. An experiment in how (not) to write C networking code.</li>
-    <li><a href="3sphere.html">Asteroids on a 3-sphere</a></li>
+  <li><a href="typeblocks/svg/typeblocks.html">TypeBlocks</a> Draggable blocks with higher-order types. Haskell flavor Scratch. Proof of concept. </li>
+  <li><a href="tst.html">An interesting font</a></li>
+  <li><a href="https://github.com/penteract/animated-octo-dangerzone">Boustrophedon browser extenstion</a></li>
+<!-- curl https://penteract.github.io/favicon.ico --output - -->
+</ul>
+
+<h3> Mathematical results </h3>
+<ul>
+
+  <li><a href="pythagTree.html">Area of the Pythagoras Tree</a> Previously unknown
+  <img src="images/pythagTree.png" height="100px"> </img>
+    <ul><li><a href="https://github.com/penteract/pythagTreeProof">Formal Proof of the Area of the Pythagoras Tree</a></li></ul>
+  <li><a href="https://observablehq.com/@penteract/a-space-filling-curve">A space filling curve</a> Resolved a conjecture I'd wondered about for ~7 years</li>
+</ul>
+<h3> Games I've made/implemented</h3>
+<ul>
+  <li>Bartok (<a href="https://github.com/penteract/Bartok">source</a>) A multiplayer card game in which you may add rules when you win (by writing them in Haskell).</li>
+  <li><a href="http://3dox.uk/">Set</a> Multiplayer Set game. An experiment in how (not) to write C networking code.</li>
+  <li><a href="https://ldjam.com/users/tesseract/games">Ludum Dare</a> <ul>
+    <li><a href="https://ldjam.com/events/ludum-dare/46/imojc">IMOJC</a> Massively multiplayer game of life (A further experiment in how (not) to write C networking code)</li>
+    <li><a href="https://ldjam.com/events/ludum-dare/47/brainstuck">Brainstuck</a> Puzzle game based on a well known esoteric programming language.</li>
+    <li><a href="https://ldjam.com/events/ludum-dare/49/4d-jenga">4D Jenga</a> </li>
+    <li><a href="https://ldjam.com/events/ludum-dare/58/fractal-collector">Fractal Collector</a> A Puzzle game in which you create fractals.</li>
+  </ul></li>
+  <li><a href="3sphere.html">Asteroids on a 3-sphere</a></li>
+</ul>
+
+<h3> Algorithms related to chess variants </h3>
+<ul>
+  <li><a href="https://github.com/penteract/cwmtt/blob/master/Game/Chess/TimeTravel/FastCheckmate.lhs">Hypercuboid Search</a> Checkmate detection for 5D chess with multiverse timetravel. Finishes in a reasonable amount of time (&lt;1 second) on all tested inputs. </li>
+  <li><a href="https://entanglement-chess.netlify.app/">Entanglement Chess</a> (<a href="https://gitlab.com/alexbay218/entanglement-chess">source</a>) I am responsible for a correct and efficient algorithm (and implementation of said algorithm) to determine which moves are legal.</li>
 </ul>
 <ul>
-    <li><a href="https://adventofcode.com/2019/leaderboard">Advent of code</a>(<a href="https://github.com/penteract/adventofcode">my solutions</a>) In 2019, I finished in the top 100 globally.</li>
+<!--    <li><a href="https://adventofcode.com/2019/leaderboard">Advent of code</a>(<a href="https://github.com/penteract/adventofcode">my solutions</a>) In 2019, I finished in the top 100 globally.</li>-->
 <!--    <li><a href="https://3d-o-x.appspot.com">3D Noughts and Crosses, Ensquared</a> Multiplayer games with some AI</li>-->
 </ul>
 
