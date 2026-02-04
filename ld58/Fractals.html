@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fractal Collector</title>
+<style>
+/*@media(prefers-color-scheme: dark){ (the dark version just looks better) */
+button{
+  margin-bottom: 2px;
+  margin-top: 2px;
+}
+button{
+  font-size: large;
+  color:white;
+  background: black;
+  box-shadow: 0 0 2px  white;
+  &:hover{
+    box-shadow: 0 0 2px  grey;
+  }
+}
+input{
+  filter:invert()
+}
+body{
+    background-color: black;
+    /*filter:invert(0.9);*/
+    color: white;
+}
+body,.part,#boxui{
+  margin:0px;
+}
+#maindiv{
+  width:700px;
+  display:inline-block;
+}
+#config{
+  display:inline-block;
+  vertical-align:top;
+}
+@media (min-width : 800px){
+  #sidediv{
+    /*display:inline-block;*/
+    position:absolute;
+    top:0px;
+    vertical-align:top;
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    max-height: 699px;
+    left:700px;
+  }
+}
+#sidediv canvas{
+  display:inline-block;
+  border: 5px solid #0000;
+  &:hover{
+    border-color:green
+  }
+}
+#bigPic{
+  display: block;
+}
+#refPic{
+  display: block;
+  margin-bottom:-700px;
+}
+.part{
+  width:500px;height:500px;
+  background:#eee4;
+  transform-origin:top left;
+}
+.part,#boxui{
+  touch-action: none;
+  position:absolute;
+  top:0;left:0;
+}
+svg,circle,canvas,.part{ /*https://stackoverflow.com/a/12906840/1779797*/
+    user-drag: none;
+    -webkit-user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+svg{
+  pointer-events: none;
+}
+circle{
+  pointer-events: all;
+  fill:#40a040;
+  r:8px;
+  touch-action: none;
+}
+circle.rot{
+  fill:#5050f0;
+}
+@media (pointer:coarse) {
+  circle{
+    r:20px;
+  }
+}
+.hidden{
+  display: none !important ;
+}
+.nowhere{
+  color:red;
+}
+.bad{
+  color:orange;
+}
+.near{
+  color:yellow;
+}
+.good{
+  color:yellowgreen;
+}
+.exellent{
+  color:#40e040
+}
+@keyframes flashing {
+  0% {
+    box-shadow: 0 0 3px #000;
+  }
+  50% {
+    box-shadow: 0 0 10px #FFF;
+  }
+  100% {
+    box-shadow: 0 0 3px #000;
+  }
+}
+#nextChallengeButton{
+  filter:none;
+  animation: flashing 1s infinite;
+}
+</style>
+<script>
+"use strict";
+let parts = [
+  {
+    x:1/4, y:1/4, w:1/2,h:1/2,rot:15
+  },
+  {
+    x:1/4, y:3/4, w:1/2,h:1/2,rot:0
+  },
+  {
+    x:3/4, y:3/4, w:1/2,h:1/2,rot:0
+  },
+  {
+    x:1/2, y:1/2, w:1/2,h:1/2,rot:0
+  }
+  /*{
+    x:2/4, y:2/4, w:1,h:1,rot:0
+  }*/
+]
+let wholePart = {x:1/2,y:1/2,w:1,h:1,rot:0}
+let h=500
+let w=500
+let ox=100
+let oy=100
+let idmat = new DOMMatrix() 
+let spmat = new DOMMatrix().translate(-ox-w/2,-oy-h/2) // convert from canvas coordinates to logical ones (500x500)
+function partToMatrix(p){
+  // return new DOMMatrix().translate(-ox-w/2,-oy-h/2) .translate(ox+(p.x-p.w/2)*h,oy+(p.y-p.h/2)*w).scale(p.w,p.h).rotate(p.rot).translate(ox+w/2,oy+h/2)
+  //
+  let m = spmat.inverse().translate((p.x-1/2)*h,(p.y-1/2)*w).rotate(p.rot).scale(p.w,p.h).multiply(spmat)
+  //.translate(-ox-w/2,-oy-h/2)
+  //  return new DOMMatrix().translate((p.x-p.w/2)*h,(p.y-p.h/2)*w).scale(p.w,p.h).rotate(p.rot)
+  return m
+}
+
+</script>
+</head>
+<body>
+<div id="maindiv">
+<canvas id="refPic" width=700 height=700></canvas>
+<canvas id="bigPic" width=700 height=700></canvas>
+<div style="margin-left:8px">
+  <!--
+<button onclick="prevChallenge()">Previous Challenge</button> -->
+<button onclick="resetChallenge(true)">Reset Challenge</button>
+Distance from solution: <span id="distance" style="display:inline-block;width:60px;">?</span>
+<button id="nextChallengeButton" onclick="nextChallenge()">Next Challenge</button>
+<br>
+Hints: <span id="hinttext"></span>
+<span id="nextHintSpan"><br><button id="nextHintBut" onclick="addHint()">More Hints</button></span>
+<span id="showSolution" class="hidden"><br><button id="showSolBut" onclick="showSol()">Show solution</button></span></div>
+<br>
+<button onclick="newpart();drawCarefully()">Create part</button> <button onclick="deletepart(selected)">Delete part</button> <button onclick="saveImage()">Save Fractal</button>
+<br>
+<div id="sidediv">
+</div>
+<fieldset>
+  <legend>Control configuration</legend>
+snap: <input type="checkbox" id="snappositions" name="snappositions" checked="false"><label for="snappositions">positions</label>
+<input type="checkbox" id="snapsizes" name="snapsizes" checked="false"><label for="snapsizes">sizes</label>
+<input type="checkbox" id="snaprotations" name="snaprotations" checked="false"><label for="snaprotations">rotation</label>
+<br>
+<input type="checkbox" id="match" name="match" checked="true"><label for="match">match width and height (keep parts square)</label><br>
+<input type="checkbox" id="center" name="center" checked="false"><label for="center">resize around center </label>
+</fieldset>
+<!-- TODO:  -->
+<!--<fieldset>
+  
+  <input type="radio" >
+</fieldset>-->
+
+<h2 >Goal</h2>
+<p>Get the white shape to match the red shape behind it and add the fractal to your collection.</p>
+<h2 >Rules</h2>
+<p>The white picture is made out of parts (the partially transparent grey squares) which describe how to make the picture as transformed copies of whatever is in the square.</p>
+<h2 >Controls</h2>
+<h3 >Mouse</h3>
+<ul>
+<li>Click: Select part </li>
+<li>Drag blue circle: rotate part</li>
+<li>Drag handles (green circles around a selected part): resize part</li>
+<li>Drag (anywhere in part except the circles): move part</li>
+<li>Buttons to create and delete parts</li>
+<li>Button to reset a challenge</li>
+<li>Button to save a fractal</li>
+<li>Click on a fractal saved in collection to admire it again at full size.</li>
+<li>Button to see more hints / get the solution</li>
+<li>Flashing button to advance to the next challenge if you&#39;ve completed it</li>
+</ul>
+<h3 >Keyboard (optional)</h3>
+<ul>
+<li>Tab or n: Cycle through parts</li>
+<li>Arrow Keys or wasd: Move selected part</li>
+<li>q/e: Rotate selected left/right</li>
+<li>Space: redraw with detail</li>
+<li>Delete: Remove selected part</li>
+</ul>
+<h2 >Strategy</h2>
+<p>Try to work out how the red shape could be made out of copies of itself (e.g. a square can be made by putting 4 smaller squares together).</p>
+<p>Create as many parts as you need copies (most challenges have the right number of parts to start with).</p>
+<p>If the copies should be rotated relative to the original, then rotate the parts.</p>
+<p>Position the parts so that the picture looks right.</p>
+<h2>Control Configuration</h2>
+<p>There are some checkboxes that affect the controls by putting restrictions how and where things move (e.g. making rotations snap to the nearest multiple of 15 degrees). Free movement is a bit more useful for getting the hang of things, but these make it much easier to neaten things up.</p>
+<p>It should be possible to complete every challenge with any combination of checkboxes being checked.</p>
+<h2 >Hints</h2>
+<p>See the strategy section above and read the per-level hints. Don&#39;t be hesitant to click the &quot;More hints&quot; button when it's available, particularly on the early levels where you&#39;re supposed to get the hang of the controls and how the game works. The first levels don&#39;t need anything except movement, then rotation. The hints will tell you when a new kind of manipulation is needed.</p>
+
+</div>
+<button id="resetProgress" onclick="resetProgress()">Reset All Challenge Progress</button> (not the same as Reset Challenge above, which resets current challenge)
+</div>
+<div id="config">
+</div>
+<div id=partsdiv style="position:absolute;top:0;left:0;">
+</div>
+<svg id="boxui" width="700" height="700" viewBox="0 0 700 700">
+  <circle cx="100" cy="100" r="20" fill="red"></circ>
+</svg>
+<script>
+"use strict";
+
+let hints = {checked:true}
+
+let ctx = bigPic.getContext("2d")
+//ctx.fillRect(1,1,20,20)
+ctx.strokeRect(ox,oy,w,h)
+let MaxSearchDepth = 8
+// let p = {x:ox+w/2,y:oy+h/2}
+//let ptsz=2
+function drawFractalAt(parts,ctx,n,count){
+  if (parts.length<1) return;
+  let mats = parts.map(partToMatrix)
+  let ptsz = Math.sqrt(w*h/n)
+  //ptsz*ptsz*n=w*h
+  let p = {x:ox+w/2,y:oy+h/2}
+  let containers
+  if(count){
+    containers = []
+    for(let i=0;i<=Math.min(MaxSearchDepth,Math.log2(n));i++){
+      let l=[]
+      for(let x=0;x<(1<<i);x++)
+        l.push(new Array(1<<i).fill(0))
+      containers.push(l)
+    }
+  }
+  let rtn = Math.sqrt(n)
+  let mx=-Infinity
+  let my=-Infinity
+  let nx=Infinity
+  let ny=Infinity
+  let mxs = {x:-Infinity,y:-Infinity}
+  let mns = {x:Infinity,y:Infinity}
+  for(let i=0;i<100;i++){
+    p = mats[(Math.random()*mats.length)|0].transformPoint(p)
+  }
+  for(let i=0;i<rtn;i++){
+    p = mats[(Math.random()*mats.length)|0].transformPoint(p)
+    for(let c of "xy"){
+      if(mxs[c]<p[c])mxs[c]=p[c]
+      if(mns[c]>p[c])mns[c]=p[c]
+    }
+  }
+  for(let i=0;i<n;i++){
+    p = mats[(Math.random()*mats.length)|0].transformPoint(p)
+    ctx.fillRect(p.x-ptsz/2,p.y-ptsz/2,ptsz,ptsz)
+    if(count){
+      let x=p.x-ox
+      let y=p.y-oy
+      if(x>=0 && x<w && y>=0 && y<h){
+        containers.map((c,i)=>c[((x*(1<<i))/w)|0 ][((y*(1<<i))/h)|0]+=1)
+      }
+    }
+  }
+  ctx.strokeRect(ox,oy,w,h)
+  return containers
+}
+let targetset
+function drawFractal(n,count){
+  bigPic.width|=0
+  ctx.fillStyle="#FFF"
+  ctx.strokeStyle="#FFF"
+  
+  let r = drawFractalAt(parts,ctx,n,count)
+  return r
+}
+
+//snapping values
+const epsilon = 10**(-5)
+function remdups(vs){ // mutating
+  for(let i=0;i+1<vs.length;){
+    if(vs[i]>vs[i+1]-epsilon)vs.splice(i,1)
+    else i++
+  }
+  return vs
+}
+let f12 = new Array(13).fill(0).map((e,i)=>i/12)
+let sqrts = new Array(6).fill(0).flatMap((e,i)=>{
+  let rt = Math.sqrt(i)
+  let a=[]
+  for(let j=1; j/rt <1; j++){
+    a.push(j/rt)
+  }
+  return a
+})
+let f24 = new Array(25).fill(0).map((e,i)=>i/24)
+let snapvalues=f12.concat(sqrts).sort()
+remdups(snapvalues)
+let sizesnaps = snapvalues.map(x=>-x).reverse().concat(snapvalues)
+let possnaps = f24 // remdups(f24.map(x=>1-x).concat(f24).sort())
+
+
+
+function bsearch(a,v){
+  let l=0
+  let r=a.length
+  while(r>l+1){
+    let m=(l+r)>>1
+    if(v<a[m])r=m
+    else l=m
+  }
+  return l
+}
+function snapTo(v,vs){//return the nearest element of vs to v
+  let ix = bsearch(vs,v)
+  if (ix==vs.length-1) return vs[ix]
+  else{
+    if (v < (vs[ix]+vs[ix+1])/2) return  vs[ix]
+    else return vs[ix+1]
+  }
+}
+function snapNext(o,prop,vs){
+  let v = o[prop]
+  let ix = bsearch(vs,v)
+  if (ix==0 && v<vs[ix]) o[prop]=vs[ix]
+  else if(ix+1>=vs.length) o[prop]=vs[ix]
+  else o[prop]=vs[ix+1]
+}
+function snapPrev(o,prop,vs){
+  let v = o[prop]
+  let ix = bsearch(vs,v)
+  if (vs[ix]==v && ix>0) o[prop]=vs[ix-1]
+  else o[prop]=vs[ix]
+}
+
+function deletepart(p){
+  let ix = parts.indexOf(p)
+  if(ix==-1 || !selected){
+    return
+  }
+  parts.splice(ix,1)
+  resetParts()
+}
+function newpart(p){
+  if(!p){
+    p={x:1/2,y:1/2,w:1/2,h:1/2,rot:0}
+    parts.push(p)
+  }
+  let n = document.createElement("div")
+  n.classList.add("part")
+  n.style.transform=partToMatrix(p).translate(ox,oy) // First move it into the coordinate system the matrix is expecting
+  n.addEventListener("pointerdown",e=>moveAction=selectAndMovePart(p,e))
+  p.div=n
+  partsdiv.append(n)
+}
+
+function drawPartdivs(parts){
+  partsdiv.replaceChildren()
+  for(let p of parts){
+    newpart(p)
+  }
+}
+
+function mksvgel(tag){
+  return document.createElementNS("http://www.w3.org/2000/svg",tag)
+}
+
+// UI
+let moveAction=()=>{}
+function drawBox(part){
+  let box = mksvgel("g")
+  for (let dx of [-1,0,1])for (let dy of [-1,0,1]) {
+    let c = mksvgel("circle")
+    part[[dx,dy]]=c
+    if(dx*dy==1) c.style.cursor="nwse-resize"
+    else if(dx*dy==-1){
+      c.style.cursor="nesw-resize"
+    }
+    else if (!(dx||dy)) {
+      c.style.cursor="grab"
+      c.classList.add("rot")
+    }
+    else if (dx==0) c.style.cursor="ns-resize"
+    else if (dy==0) c.style.cursor="ew-resize"
+    c.addEventListener("pointerdown",()=>moveAction=chooseResize(dx,dy,part))
+    box.append(c)
+  }
+  return box
+}
+
+function transformChanged(part,noRedrawFractal){
+  let mat = partToMatrix(part)
+  for (let dx of [-1,0,1])for (let dy of [-1,0,1]) {
+    let c=part[[dx,dy]]
+    if(c){
+      if (!(dx||dy)) dy-=1.4
+      let {x,y} = mat.transformPoint({x:ox+w*(1+dx)/2,y:oy+h*(1+dy)/2})
+      c.setAttribute("cx",x)
+      c.setAttribute("cy",y)
+      c.setAttribute("r",5)
+    }
+  }
+  part.div.style.transform = mat.translate(ox,oy)
+  if(!noRedrawFractal) drawFractal(10000)
+}
+/*
+function drawBoxes(){
+  parts.map(part=>boxui.append(drawBox(part)))
+}*/
+let selected
+function selectAndMovePart(p,e){
+  selectPart(p)
+  let initex=e.pageX
+  let initey=e.pageY
+  let original = {x:p.x,y:p.y}
+  return (e)=>{
+    p.x = original.x+(e.pageX-initex)/w
+    p.y = original.y+(e.pageY-initey)/h
+    if(snappositions.checked){
+      p.x = snapTo(p.x,possnaps)
+      p.y = snapTo(p.y,possnaps)
+    }
+    transformChanged(p)
+  }
+}
+function selectPart(p){
+  if(p && selected!==p){
+    selected=p
+    boxui.replaceChildren(drawBox(p))
+    transformChanged(p,true)
+  }
+}
+function deselect(){
+  selected=undefined
+  boxui.replaceChildren()
+}
+let ot = bigPic.offsetTop // for adjusting the mouse 
+let ol = bigPic.offsetLeft
+function chooseResize(dx,dy,part){
+  // set the moveAction while the mouse is held over handles dx,dy
+  if(!(dx||dy)){
+    let cx = part.x*w+ox+ol
+    let cy = part.y*h+oy+ot
+    return (e) => {
+      part.rot = Math.atan2((e.pageY-cy)*Math.sign(part.h),(e.pageX-cx)*Math.sign(part.h) )*180/Math.PI + 360+90
+      if(snaprotations.checked){//(cliprot){
+        part.rot-=((part.rot+7.5)%15 -7.5)
+        part.rot|=0
+      }
+      transformChanged(part)
+    }
+  }
+  let o = {w:part.w,h:part.h}
+  //transform original into rotated coordinates
+  let cmat = idmat.translate(1/2,1/2).rotate(-part.rot).translate(-1/2,-1/2)
+  let cmati = cmat.inverse()
+  let ro = cmat.transformPoint({x:part.x,y:part.y})
+
+  // Transform m into unit-square (rotated) coordinates
+  let unrot = idmat.scale(1/w,1/h).translate(w/2,h/2).rotate(-part.rot).translate(-w/2-ox,-h/2-oy).translate(-ol,-ot);
+  return (e) => {
+    let m = unrot.transformPoint({x:e.pageX,y:e.pageY})
+
+    if(center.checked){
+      //if center preserving:
+      // ro.x+dx*n.w/2 = m.x
+      if(dx){
+        part.w = (m.x-ro.x)*2/dx
+      }
+      if(dy){
+        part.h = (m.y-ro.y)*2/dy
+      }
+    }
+    else{
+      // if not center preserving
+      // ro.x-dx*o.w/2 = n.x-dx*n.w/2
+      // n.x+dx*n.w/2 = m.x (not always true when match.checked)
+      if(dx){
+        part.w=(m.x-ro.x+dx*o.w/2)/dx
+      }
+      if(dy){
+        part.h=(m.y-ro.y+dy*o.h/2)/dy
+      }
+    }
+    if(match.checked){
+      if(!dx) part.w=Math.abs(part.h)*Math.sign(o.w)
+      else if(!dy) part.h=Math.abs(part.w)*Math.sign(o.h)
+      else {
+        let delta = (part.h*Math.sign(o.h) - part.w*Math.sign(o.w)) / 2 // preserve agreement of sign
+        part.h-=delta*Math.sign(o.h)
+        part.w+=delta*Math.sign(o.w)
+      }
+    }
+    if(snapsizes.checked){
+      if(dx || match.checked) part.w = snapTo(part.w,sizesnaps)
+      if(dy || match.checked) part.h = snapTo(part.h,sizesnaps)
+    }
+    if(!center.checked){
+      let nx = dx?ro.x+dx*(part.w-o.w)/2:ro.x
+      let ny = dy?ro.y+dy*(part.h-o.h)/2:ro.y
+      /*
+      // let nx=dx?(m.x+ro.x-dx*o.w/2)/2:ro.x
+      // let ny=dy?(m.y+ro.y-dy*o.h/2)/2:ro.y
+      nx=dx?m.x-dx*part.w/2:ro.x
+      ny=dy?m.y-dy*part.h/2:ro.y
+      if(delta){
+        // I'm ashamed to admit that I did this bit by trial and error
+        // rather than the honest way of deriving it, then bugfixing by trial and error
+        nx+=dx*delta
+        ny-=dy*delta
+      }*/
+      let {x,y}=cmati.transformPoint({x:nx,y:ny})
+      part.x=x
+      part.y=y // need to change both regardless of dy/dx in case of rotation
+    }
+    //spmat.inverse().translate((part.x-1/2)*h,(p.y-1/2)*w).rotate(part.rot).multiply(spmat);
+    transformChanged(part);
+  }
+}
+
+document.addEventListener("pointermove",(e)=> {moveAction(e)})
+let conts
+function pointerEnd(e){
+  if(e.target.parentElement!=sidediv) drawCarefully()
+  moveAction = ()=>{}
+}
+let carefulDrawCount = 100000
+function drawCarefully(){
+  clearTimeout(keyboardTimeout)
+  conts = drawFractal(carefulDrawCount,true)
+  checkAnswer(conts)
+  //console.log(calcDim(conts))
+}
+document.addEventListener("pointerup",pointerEnd)
+document.addEventListener("pointercancel",pointerEnd)
+
+document.addEventListener("pointerdown",(e)=>
+  console.log(e,e.x,e.y)
+)
+let keyboardTimeout
+document.addEventListener("keydown",(e)=>{
+  if(selected){
+    console.log(e)
+    let unhandled=false;
+    switch(e.key){
+      case "d":
+      case "ArrowRight":
+        if (snappositions.checked) snapNext(selected,"x",possnaps)
+        else selected.x+=1/60
+        transformChanged(selected)
+        break;
+      case "a":
+      case "ArrowLeft":
+        if (snappositions.checked) snapPrev(selected,"x",possnaps)
+        else selected.x-=1/60
+        transformChanged(selected)
+        break;
+      case "s":
+      case "ArrowDown":
+        if (snappositions.checked) snapNext(selected,"y",possnaps)
+        else selected.y+=1/60
+        transformChanged(selected)
+        break;
+      case "w":
+      case "ArrowUp":
+        if(snappositions.checked) snapPrev(selected,"y",possnaps)
+        else selected.y-=1/60
+        transformChanged(selected)
+        break;
+      case "q":
+        selected.rot-=15
+        transformChanged(selected)
+        break;
+      case "e":
+        selected.rot+=15
+        transformChanged(selected)
+        break;
+      case "Delete":
+        deletepart(selected)
+        break;
+      case " ":
+        drawCarefully()
+        break;
+      case "Tab":
+      case "n":
+        for(let i=0;i<parts.length;i++){
+          if(selected==parts[i]) {
+            selectPart(parts[(i+1)%parts.length])/*
+            if(i+1<parts.length) selectPart(parts[i+1])
+            else deselect()*/
+            break;
+          }
+          if(i+1==parts.length)selectPart(parts[0])
+        }
+        break;
+      default:
+        unhandled=true
+    }
+    if(!unhandled && selected){
+      e.preventDefault()
+      if(e.key!=" "){
+        clearTimeout(keyboardTimeout)
+        keyboardTimeout = setTimeout(drawCarefully
+          ,500)
+      }
+      // stops scrolling (arrow keys and space) and might do something about tab
+    }
+  }
+})
+
+//drawPartdivs(parts)
+//drawFractal(10000)
+
+function logparts(){
+  console.log("[" + parts.map(p=> "{"+["x","y","w","h","rot"].map(c=>c+":"+p[c]).join(",")+"}" ).join(",")+"]")
+}
+function calcDim(conts){
+  return conts.map((c,i)=>{
+    let ni = c.reduce(((a,r)=>a+r.reduce(((a,b)=>a+(b!=0)),0)),0)
+    return Math.log2(ni)/i
+  })
+
+}
+function copyparts(parts){
+  return parts.map(p=>({"x":p.x,"y":p.y,"w":p.w,"h":p.h,"rot":p.rot}))
+}
+//Save/load
+let saved = JSON.parse(localStorage.getItem("parts"))
+if(saved===null) saved=[]
+function saveImage(){
+  let pts = copyparts(parts)
+  saved.push(pts)
+  localStorage.setItem("parts",JSON.stringify(saved))
+  mkSideCanvas(pts)
+}
+function mkSideCanvas(pts,quick){// assumes pts is never mutated
+  let op=parts
+  parts=pts
+  drawFractal(quick?(carefulDrawCount*2)/(saved.length+1):carefulDrawCount)
+  let newCanvas = document.createElement("canvas")
+  newCanvas.width=100
+  newCanvas.height=100
+  sidediv.prepend(newCanvas)
+  //newCanvas.parts = pts
+  newCanvas.addEventListener("click",(e)=>{
+    parts = copyparts(pts)
+    resetParts()
+  })
+  let ctx=newCanvas.getContext("2d")
+  ctx.drawImage(bigPic, ox, oy, w, h, 0, 0, newCanvas.width, newCanvas.height)
+  parts = op
+  return newCanvas
+}
+for(let im of saved){
+  //parts=copyparts(im)
+  mkSideCanvas(im,true)
+}
+function resetParts(){
+  drawPartdivs(parts)
+  selectPart(parts[0])
+  drawCarefully()
+  //drawFractal(10000)
+}
+//resetParts()
+// saveImage()
+//drawBoxes()
+/*
+TODO: 
+Set comparison
+Better fractal dimension calculation
+puzzles / achievements
+*/
+function setDist(r,s){
+  //TODO: match lengths
+  return asymmSetDist(r,s)/r[0][0][0]+asymmSetDist(s,r)/s[0][0][0] // Max would also work here
+}
+function asymmSetDist(r,s){
+  //find the mean square distance to s over points in r
+  //for each point, test samebox; then repeatedly (test 8 surrounding boxes; go up a level)
+  if(s[0][0][0]<1) return Infinity
+  let cache = {}
+  function distFrom(d,x,y){//log distance from point (depth,x,y) to s
+    let r = cache[[d,x,y]]
+    if(r===undefined){ // work it out
+      //if(s[d][x][y]) r=1
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        if (s[d][x+dx]?.[y+dy]){
+          r=1
+          break
+        }
+      }
+      if(!r){
+        r=1+distFrom(d-1,x>>1,y>>1)
+      }
+      cache[[d,x,y]]=r
+    }
+    return r
+  }
+  function costFrom(d,x,y){
+    let n = r[d][x][y]
+    if(n==0) return 0
+    if(d==r.length-1){
+      return (n*((1<<(2*distFrom(d,x,y)-2))-1) )
+    }
+    let tot = 0
+    for(let dx=0;dx<=1;dx++)for(let dy=0;dy<=1;dy++){
+      tot += costFrom(d+1,2*x+dx,2*y+dy)
+      if(!(dx||dy)){
+        let v = cache[[d,x,y]]
+        if(v && v>1) return n*((1<<(2*(v+r.length-1-d-1))-1) )
+      }
+    }
+    return tot
+  }
+  return costFrom(0,0,0)
+}
+
+// let s = drawFractal(carefulDrawCount,true) 
+// setDist(s,s)
+let ctx2 = refPic.getContext("2d")
+ctx2.strokeStyle="#FFF"
+ctx2.fillStyle="#F00"
+ctx2.strokeRect(ox,oy,w,h)
+
+const allowed = {
+  move:true,
+  rotate:false,
+  
+}
+
+
+let challenges = [
+  {
+    target : [{x:0.5,y:0.33333333333333337,w:0.5,h:0.5,rot:360},{x:0.33333333333333337,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.7071067811865475,y:0.6666666666666667,w:0.5,h:0.5,rot:0}]
+    /* [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]*/
+  , init : [{x:0.25,y:0.25,w:0.5,h:0.5,rot:360},{x:0.2916666666666667,y:0.7083333333333334,w:0.5,h:0.5,rot:0},{x:0.7083333333333334,y:0.7083333333333334,w:0.5,h:0.5,rot:0}]
+  /*[{x:0.25,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]*/
+  , hints : ["Move the parts around using the mouse or arrow keys",
+    "Reset the challenge if you're stuck. For this one, you only need to move the grey squares around which you can do by dragging the middle of them"
+  ]
+  , name : "Movement"
+  },
+  {
+    target : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.25,y:0.25,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.5,w:0.5,h:0.5,rot:0}]
+  , hints : ["A square can be formed out of 4 smaller squares, one in each corner.",
+      "Reset the challenge if you're stuck. This can be solved by moving the part in the middle into the top left corner"
+  ]
+  , name : "Solid square" 
+  , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.6666666666666666,y:0.375,w:0.5,h:0.5,rot:360},{x:0.3333333333333333,y:0.625,w:0.5,h:0.5,rot:0},{x:0.625,y:0.6666666666666666,w:0.5,h:0.5,rot:0},{x:0.375,y:0.3333333333333333,w:0.5,h:0.5,rot:0}]
+  , init :[{x:0.625,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.625,w:0.5,h:0.5,rot:0},{x:0.2916666666666667,y:0.4583333333333333,w:0.5,h:0.5,rot:0}]
+  , hints : ["Here's a smaller square. You don't need to rotate or resize any of the parts for this challenge.",
+      "Reset the challenge if you're stuck. This can be solved without doing anything except moving the parts. Try and use each part to get a different corner of the square in the right places"
+  ]
+  , name : "smaller square" 
+  , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.25,y:0.75,w:0.5,h:0.5,rot:90},{x:0.75,y:0.75,w:0.5,h:0.5,rot:360},{x:0.75,y:0.25,w:0.5,h:0.5,rot:270}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["Parts can be rotated using the top handle (the blue circle which appears above a part when you click on it) or Q/E on the keyboard.",
+      "Reset the challenge if you're stuck. Rotate the bottom left part by 90 degrees clockwise and"+
+      " the top right part by 90 degrees clockwise."]
+  , name : "Rotation"
+  },
+  {
+    target :[{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.75,w:0.5,h:0.5,rot:540}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.5,w:0.5,h:0.5,rot:0}]
+  , hints : [
+    "Now for a solid triangle.",
+    "Like with a square, you can make a triangle out of 4 smaller ones",
+    "One of the 4 copies needs to be upsidedown",
+    "Reset the challenge if you're stuck. Rotate one copy by 180 degrees, nothing needs to be resized"
+  ]
+  , name : "Solid Triangle" 
+  , thresholdFactor : 10
+  },
+  {
+    target: [{x:0.2916666666666667,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:495},{x:0.5833333333333334,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:585}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["These parts each have half the area of the full square, allowing for some interesting patterns with solid areas.",
+           "Can you see a way to make the red triangle out of 2 copies of itself? How much do they need to be rotated by?",
+           "Try rotating both parts by 135 degrees in opposite directions (3/8ths of a full circle). Reset the challenge if you're stuck.",
+           "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Right Isoceles triangle"
+  },
+  {
+    target:[{x:0.6666666666666666,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:585},{x:0.3333333333333333,y:0.5,w:-0.7071067811865475,h:-0.7071067811865475,rot:585}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Now we move onto some dragons",
+           "Could you fit a smaller copy of the target shape into itself? You'll need to rotate something.",
+           "Try rotating both parts by 45 degrees clockwise. Reset the challenge if you're stuck.",
+           "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Twin Dragon" 
+  },
+  {
+    target : [{x:0.6666666666666667,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:405},{x:0.33333333333333337,y:0.5,w:0.7071067811865475,h:0.7071067811865475,rot:315}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Can you see how copies of the target shape could fit within it?",
+            "Try rotating the parts by 45 degrees in different directions. Reset the challenge if you're stuck.",
+            "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Lévy Dragon" 
+  },
+  {
+    target : [{x:0.75,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:495},{x:0.4166666666666667,y:0.6666666666666666,w:0.7071067811865475,h:0.7071067811865475,rot:405}]
+  , init : [{x:0.6666666666666666,y:0.375,w:0.7071067811865475,h:0.7071067811865475,rot:360},{x:0.375,y:0.4583333333333333,w:0.7071067811865475,h:0.7071067811865475,rot:360}]
+  , hints : ["Can you see smaller copies of the target shape within it?",
+            "Try rotating the parts by 45 degrees and 135 degrees. Reset the challenge if you're stuck.",
+            "The snap rotation setting in 'control configuration' below can be useful"]
+  , name : "Heighway Dragon" 
+  },
+
+  {
+    target : [{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.625,y:0.4166666666666667,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.2916666666666667,y:0.5833333333333334,w:0.5,h:0.5,rot:0},{x:0.6666666666666666,y:0.5,w:0.5,h:0.5,rot:0}]
+  , hints : ["Try deleting a part using the Delete key or the 'Delete Part' button below.",
+    "Reset the challenge if you're stuck. This one can be solved by deleting a single part and then moving parts until the white line matches the red line"
+  ]
+  , name : "Delete"
+  },
+  {
+    target : [{x:0.8333333333333334,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:-0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360}]
+    //[{x:0.75,y:0.8333333333333334,w:0.25,h:0.25,rot:360},{x:0.6666666666666667,y:0.33333333333333337,w:0.6666666666666666,h:0.6666666666666666,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:0}]
+  , init : [{x:0.75,y:0.75,w:0.5,h:0.5,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:-0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.25,w:0.5,h:0.5,rot:360}]
+  // [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["Try making parts bigger/smaller using the side/corner handles (green circles).",
+    "Reset the challenge if you're stuck. This one can be solved by making one of the parts bigger and three of them smaller."
+  ]
+  , name : "Resize"
+  },
+
+  {
+    target : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:630},{x:0.25,y:0.75,w:0.5,h:0.5,rot:450},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.25,y:0.25,w:0.5,h:0.5,rot:0}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["A square again. Create a new part using the button below and put it in the gap.",
+      "Reset the challenge if you're stuck. This can be solved by creating a new part and moving it into the top left corner"
+  ]
+  , name : "Create" 
+  , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0},{x:0.5,y:0.625,w:0.25,h:0.25,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["Looks like something's missing. Create a new part using the button below and modify it appropriately.",
+    "If you've got something that covers some of the solution, but not all of it, look for the largest red piece which could be covered by a copy of the whole thing, then create a part which makes something that covers that",
+    "Reset the challenge if you're stuck. This one can be solved by creating a part, making it a bit smaller, and putting it in the middle"
+  ]
+  , name : "Sierpiński Plus"
+  },
+  {
+    target : [{x:0.5,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.16666666666666666,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:360},{x:0.8333333333333334,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.16666666666666666,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.8333333333333334,y:0.5,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.16666666666666666,y:0.5,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.16666666666666666,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0},{x:0.5,y:0.8333333333333334,w:0.3333333333333333,h:0.3333333333333333,rot:0}]
+  , init : [{x:0.5,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : ["You'll need to make a few new pieces for this one"]
+  , name : "Sierpiński carpet"
+  },
+  
+  {
+    target :[{x:0.6666666666666666,y:0.4166666666666667,w:0.7071067811865475,h:0.7071067811865475,rot:450},{x:0.375,y:0.5416666666666666,w:0.7071067811865475,h:0.7071067811865475,rot:450}]
+  , init : [{x:0.75,y:0.25,w:0.5,h:0.5,rot:360},{x:0.25,y:0.75,w:0.5,h:0.5,rot:0},{x:0.75,y:0.75,w:0.5,h:0.5,rot:0}]
+  , hints : [
+    "You are expected to create or delete a part for this challenge",
+    "This could be done like the square, with 4 squares of the ",
+    "But there's a way to use fewer parts: this rectangle has the same aspect ratio as a piece of A4 paper.",
+    "If you cut a piece of A4 paper in half, you get 2 A5 pieces with the same aspect ratio as the original.",
+    "The short edges of the A5 sheet form the long edges of the A4 sheet, so both parts need a 90 degree rotation",
+    "Make sure the parts have sides that are 1/√2 of the full square. Some of the earlier challenges used squares that size, so clicking a saved fractal to load it might help"
+  ]
+  , name : "Solid Rectangle"
+  , thresholdFactor : 10
+  },
+  {
+    target : [{x:0.5416666666666666,y:0.375,w:-0.75,h:0.75,rot:360.9338669250746},{x:0.6666666666666666,y:0.7083333333333334,w:0.5833333333333334,h:0.5833333333333334,rot:396.69768666306084}]
+  , init : [{x:0.6666666666666666,y:0.625,w:0.5,h:0.5,rot:360},{x:0.4583333333333333,y:0.4166666666666667,w:0.5,h:0.5,rot:360}]
+  , hints : [ "What a pretty fern",
+    "you'll need to resize parts for this",
+    "A piece can become a scaled reflection of the whole thing if you drag one of the side handles to give it a negative width or height"
+  ]
+  , name : "Fern"
+  },
+  /*
+  {
+    target : 
+  , init : 
+  , hints : 
+  , name : 
+  },
+  */
+  /*
+  {
+    target : 
+  , init : 
+  , hints : 
+  , name : 
+  },
+  */
+]
+
+function checkAnswer(r){
+  if(targetset){
+    let d = setDist(targetset,r)*thresholdFactorg
+    distance.innerText=d.toFixed(2)
+    distance.className=d>100?"nowhere":d>10?"bad":d>1?"near":d>0.1?"good":"exellent"
+    if (d<=1 && challengeNum==challengeCount){
+      challengeCount+=1
+      localStorage.setItem("challengeCount",challengeCount)
+      if(challengeNum+1==challenges.length){
+        alert("Congratulations, you've completed all the challenges, enjoy playing freestyle")
+        console.log("TODO: hide challenge related ui")
+        saveImage()
+        refPic.classList.add("hidden")
+      }
+      else if(confirm("Congratualtions, Challenge complete (distance "+d.toFixed(3)+").\n Save this fractal and continue to the next challenge?")){
+        challengeNum+=1
+        saveImage()
+        resetChallenge()
+      }
+      else{
+        nextChallengeButton.classList.remove("hidden")
+      }
+    }
+  }
+}
+let targetParts
+function setTarget(parts){
+  refPic.classList.remove("hidden")
+  refPic.width|=0
+  ctx2.fillStyle="#F00"
+  targetParts = parts
+  targetset = drawFractalAt(parts,ctx2,carefulDrawCount,true)
+}
+let curHints=[]
+let numHintsShown=0
+function setHints(hints){
+  hinttext.innerHTML=""
+  curHints=hints
+  numHintsShown=0
+  if(hints.length>0)addHint()
+}
+function showSol(){
+  parts = copyparts(targetParts)
+  challengeCount=challengeNum+1
+  nextChallengeButton.classList.remove("hidden")
+  showSolution.classList.add("hidden")
+  resetParts()
+}
+function addHint(){
+  hinttext.innerHTML+="<BR>"+curHints[numHintsShown++]
+  if (numHintsShown<curHints.length){
+    nextHintSpan.classList.remove("hidden")
+    showSolution.classList.add("hidden")
+  }
+  else{
+    nextHintSpan.classList.add("hidden")
+    showSolution.classList.remove("hidden")
+  }
+}
+let thresholdFactorg=1
+function startChallenge(c,keephints){
+  if(challengeCount<=challengeNum) nextChallengeButton.classList.add("hidden")
+  let {target,init,hints,thresholdFactor} = c
+  thresholdFactorg=thresholdFactor??1
+  setTarget(target)
+  // targetset = drawFractalAt(target,ctx2,carefulDrawCount,true)
+  parts = copyparts(init)
+  resetParts()
+  drawCarefully()
+  if(!keephints) {setHints(hints)}
+}
+let challengeCount= +localStorage.getItem("challengeCount") // completed challenges
+let challengeNum = challengeCount
+if(challengeNum<challenges.length) startChallenge(challenges[challengeNum])
+else{resetParts()}
+function nextChallenge(){
+  if(challengeNum<challenges.length-1){
+    ++challengeNum
+    resetChallenge()
+    //startChallenge(challenges[])
+  }
+  else{
+    alert("You're at the end of the challenges, enjoy making whatever fractals you want")
+    console.log("TODO: hide challenge related ui")
+    refPic.classList.add("hidden")
+  }
+}
+function resetChallenge(keephints){
+  startChallenge(challenges[challengeNum],keephints)
+}
+function resetProgress(){
+  challengeCount=0
+  challengeNum=0
+  resetChallenge()
+  localStorage.setItem("challengeCount",challengeCount)
+}
+</script>
+</body>
+</html>
