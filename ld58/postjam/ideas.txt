@@ -1,0 +1,56 @@
+Keep it together
+construction/gluing. Add connections to stop things blowing apart as they grow. Arrange protons and neutrons within atomic Nucleus?
+
+Connection
+Machines that convert some resources into others. Fuel for resource transport also needs to move, leading to interesting optimal transport paths.
+previous ideas: phone tower arrangement with heightmap
+see also: Keep it together
+
+Collector
+Pull resources in towards a point.
+
+Modular
+build something made of recursive levels. A CPU?
+
+Isolation
+electrical isolation ; wiring problems
+keep an enemy isolated? Enemies buff as they get closer to each other?
+resource collection/construction game if isolated from society (factorio style)
+forge connections with neighbouring settlements through trade (could also work for connection)
+
+
+Leave something behind
+
+
+
+Nothing is permanent
+play snake on a skill tree (possibly on a skill tree slowly scrolling leftwards)
+One snake move between combat levels? Play snake continuously to buff a tower defense array?
+Player is free to buff snake speed?
+
+Salvage
+previous ideas: chess where you play one turn then pass the board to somebody else
+
+Expedition
+see Navigation
+
+Fog
+
+Split
+nuclear fission?
+cell division?
+
+Night is coming
+
+
+Navigation
+connection idea with a map with seas and coasts
+previous ideas: 4D maze
+
+Ruins
+
+
+Combine
+see Connection
+
+Overgrown

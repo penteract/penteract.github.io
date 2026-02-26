@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fractal Collector</title>
+<link rel="stylesheet" type="text/css" href="Fractals.css">
+</head>
+<body>
+<div id="maindiv">
+<canvas id="refPic" width=700 height=700></canvas>
+<canvas id="bigPic" width=700 height=700></canvas>
+<div style="margin-left:8px">
+  <!--
+<button onclick="prevChallenge()">Previous Challenge</button> -->
+Approximate fractal dimension: <span id="dimension" style="display:inline-block;width:60px;">?</span><br>
+<button onclick="resetChallenge(true)">Reset Challenge</button>
+Distance from solution: <span id="distance" style="display:inline-block;width:60px;">?</span>
+<button id="levelSelectButton" onclick="levelSelect()">Level Select</button>
+<br>
+Hints: <span id="hinttext"></span>
+<span id="nextHintSpan"><br><button id="nextHintBut" onclick="addHint()">More Hints</button></span>
+<span id="showSolution" class="hidden"><br><button id="showSolBut" onclick="showSol()">Show solution</button></span></div>
+<br>
+<button onclick="newpart();drawCarefully()">Create part</button> <button onclick="deletepart(selected)">Delete part</button> <button onclick="saveImage()">Save Fractal</button>
+<br>
+<div id="sidediv">
+</div>
+<fieldset>
+  <legend>Control configuration</legend>
+snap: <input type="checkbox" id="snappositions" name="snappositions" checked="false"><label for="snappositions">positions</label>
+<input type="checkbox" id="snapsizes" name="snapsizes" checked="false"><label for="snapsizes">sizes</label>
+<input type="checkbox" id="snaprotations" name="snaprotations" checked="false"><label for="snaprotations">rotation</label>
+<br>
+<input type="checkbox" id="match" name="match" checked="true"><label for="match">match width and height (keep parts square)</label><br>
+<input type="checkbox" id="center" name="center" checked="false"><label for="center">resize around center </label><br>
+<label for="detail">Drawing detail:</label> fast <input type="range" id="detail" name="detail" min="-4" max="4" step="1" value="0" onchange="setTarget(curLevel.target)" /> detailed
+
+</fieldset>
+<!-- TODO:  -->
+<!--<fieldset>
+  
+  <input type="radio" >
+</fieldset>-->
+
+<h2 >Goal</h2>
+<p>Get the white shape to match the red shape behind it and add the fractal to your collection.</p>
+<h2 >Rules</h2>
+<p>The white picture is made out of parts (the partially transparent grey squares) which describe how to make the picture as transformed copies of whatever is in the square.</p>
+<h2 >Controls</h2>
+<h3 >Mouse</h3>
+<ul>
+<li>Click: Select part </li>
+<li>Drag blue circle: rotate part</li>
+<li>Drag handles (green circles around a selected part): resize part</li>
+<li>Drag (anywhere in part except the circles): move part</li>
+<li>Buttons to create and delete parts</li>
+<li>Button to reset a challenge</li>
+<li>Button to save a fractal</li>
+<li>Click on a fractal saved in collection to admire it again at full size.</li>
+<li>Button to see more hints / get the solution</li>
+<li>Flashing button to advance to the next challenge if you&#39;ve completed it</li>
+</ul>
+<h3 >Keyboard (optional)</h3>
+<ul>
+<li>Tab or n: Cycle through parts</li>
+<li>Arrow Keys or wasd: Move selected part</li>
+<li>q/e: Rotate selected left/right</li>
+<li>Space: redraw with detail</li>
+<li>Delete: Remove selected part</li>
+<li>Ctrl+z: Undo</li>
+<li>Ctrl+y or Ctrl+Shift+z: Redo</li>
+</ul>
+<h2 >Strategy</h2>
+<p>Try to work out how the red shape could be made out of copies of itself (e.g. a square can be made by putting 4 smaller squares together).</p>
+<p>Create as many parts as you need copies (most challenges have the right number of parts to start with).</p>
+<p>If the copies should be rotated relative to the original, then rotate the parts.</p>
+<p>Position the parts so that the picture looks right.</p>
+<h2>Control Configuration</h2>
+<p>There are some checkboxes that affect the controls by putting restrictions how and where things move (e.g. making rotations snap to the nearest multiple of 15 degrees). Free movement is a bit more useful for getting the hang of things, but these make it much easier to neaten things up.</p>
+<p>It should be possible to complete every challenge with any combination of checkboxes being checked.</p>
+<h2 >Hints</h2>
+<p>See the strategy section above and read the per-level hints. Don&#39;t be hesitant to click the &quot;More hints&quot; button when it's available, particularly on the early levels where you&#39;re supposed to get the hang of the controls and how the game works. The first levels don&#39;t need anything except movement, then rotation. The hints will tell you when a new kind of manipulation is needed.</p>
+
+</div>
+<button id="resetProgress" onclick="resetProgress()">Reset All Challenge Progress</button> (not the same as Reset Challenge above, which resets current challenge)
+</div>
+<div id=partsdiv style="position:absolute;top:0;left:0;">
+</div>
+<svg id="boxui" width="700" height="700" viewBox="0 0 700 700">
+  <circle cx="100" cy="100" r="20" fill="red"></circ>
+</svg>
+<div id="outerLevelSelect"  ><!--class="hidden"-->
+  <div id="levelSelectdiv">
+  <div id="levelSelectgrid" > </div>
+  </div>
+</div>
+<div id="outeralert" class="hidden">
+  <div id="alertdiv">
+    <div id="alertmsg"></div>
+    <button id="cancelBut" onclick="cont(0)">Stay</button>
+    <button id="okbut" onclick="cont(1)">Continue</button>
+    <button id="selbut" onclick="cont(2)">Level select</button>
+  </div>
+</div>
+<script src="Constants.js"></script>
+<script src="Drawing.js"></script>
+<script src="Snapping.js"></script>
+<script src="SetCompare.js"></script>
+<script src="LevelData.js"> </script>
+<script src="LevelSelect.js"> </script>
+<script src="BoxManip.js"></script>
+<script src="Fractals.js"> </script>
+
+</body>
+</html>

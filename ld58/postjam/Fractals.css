@@ -1,0 +1,246 @@
+/*@media(prefers-color-scheme: dark){ (the dark version just looks better) */
+button{
+  margin-bottom: 2px;
+  margin-top: 2px;
+}
+button{
+  font-size: large;
+  color:white;
+  background: black;
+  box-shadow: 0 0 2px  white;
+  &:hover{
+    box-shadow: 0 0 2px  grey;
+  }
+}
+input{
+  filter:invert()
+}
+input[type=range]{
+  vertical-align:top;
+}
+body{
+    background-color: black;
+    /*filter:invert(0.9);*/
+    color: white;
+}
+body,.part,#boxui{
+  margin:0px;
+}
+#maindiv{
+  width:700px;
+  display:inline-block;
+}
+@media (min-width : 800px){
+  #sidediv{
+    /*display:inline-block;*/
+    position:absolute;
+    top:0px;
+    vertical-align:top;
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+    max-height: 699px;
+    left:700px;
+  }
+}
+#sidediv canvas{
+  display:inline-block;
+  border: 5px solid #0000;
+  &:hover{
+    border-color:green
+  }
+}
+#bigPic{
+  display: block;
+}
+#refPic{
+  display: block;
+  margin-bottom:-700px;
+}
+.part{
+  width:500px;height:500px;
+  background:#eee4;
+  transform-origin:top left;
+}
+.part,#boxui{
+  touch-action: none;
+  position:absolute;
+  top:0;left:0;
+}
+svg,circle,canvas,.part{ /*https://stackoverflow.com/a/12906840/1779797*/
+    user-drag: none;
+    -webkit-user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+svg{
+  pointer-events: none;
+}
+circle{
+  pointer-events: all;
+  fill:#40a040;
+  r:8px;
+  touch-action: none;
+}
+circle.rot{
+  fill:#5050f0;
+}
+@media (pointer:coarse) {
+  circle{
+    r:20px;
+  }
+}
+.hidden{
+  display: none !important ;
+}
+.nowhere{
+  color:red;
+}
+.bad{
+  color:orange;
+}
+.near{
+  color:yellow;
+}
+.good{
+  color:yellowgreen;
+}
+.exellent{
+  color:#40e040
+}
+@keyframes flashing {
+  0% {
+    box-shadow: 0 0 3px #000;
+  }
+  50% {
+    box-shadow: 0 0 10px #FFF;
+  }
+  100% {
+    box-shadow: 0 0 3px #000;
+  }
+}
+.flashing{
+  filter:none;
+  animation: flashing 1s infinite;
+}
+#outeralert,#outerLevelSelect{
+  top:0px;
+  position:fixed;
+  text-align:center;
+  height:100%;
+  width:100%;
+  pointer-events: none; /* don't block mouse events on the background since keyboard events aren't blocked either*/
+}
+#outeralert{
+  transform:scale(200%);
+}
+#alertdiv{
+  max-width:50%;
+  max-width:50vw;
+}
+#alertdiv,#levelSelectdiv{
+  pointer-events: all;
+  top:50%;
+  transform: translateY(-50%);
+  display:inline-block;
+  box-sizing:border-box;
+  padding:10px;
+  position:relative;
+
+  background: darkblue;
+  color: white;
+  overflow:auto;
+  max-height:100vh;
+  max-width:100vw;
+}
+#levelSelectdiv{
+  /*width:900px*/
+}
+#levelSelectgrid{
+  display: grid;
+  grid-template-columns: repeat(5, 150px);
+  gap: 30px;
+  grid-auto-rows: auto;
+}
+.lvlbox{/* make a new stacking context so that everything gets placed correctly around it*/
+  position:relative;
+  z-index:0;
+}
+.lvlbox{
+  border: 1px solid white;
+  min-width:150px;
+}
+.lvlbox:not(.locked)>.incomplete{
+  filter:brightness(22%) sepia(100%) contrast(1.4)  hue-rotate(70deg) brightness(450%);
+}
+/*
+.lvlbox.locked>.incomplete{
+  filter: none;
+}*/
+#levelSelectgrid>.lvlbox:not(.locked).incomplete{
+  filter:brightness(22%) sepia(100%) contrast(1.4)  hue-rotate(70deg) brightness(450%);
+}
+.lvlgroup:not(.locked)>.lvlbox.incomplete{
+  filter:brightness(22%) sepia(100%) contrast(1.4)  hue-rotate(70deg) brightness(450%);
+}
+.lvlbox.locked{
+  filter: contrast(20%);
+}
+.lvlbox canvas {
+  padding-top:2px;
+}
+#levelSelectgrid>.lvlbox:not(.lvlgroup):not(.locked):hover{
+  transform:scale(110%);
+  transform-origin: top;
+}
+.lvlgroup:not(.locked)>.lvlbox:hover{
+  transform-origin: top;
+  transform:scale(110%);
+}
+.lvlgroup{
+  margin-top:20px;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+}
+.lvlgroup>.lvlbox{
+  border: none;
+}
+.lvlgroup>.lvlbox:last-child:nth-child(2n+1){
+  position:relative;
+  left:75px;
+}
+.lvlgroup>h2{
+  border: 1px solid white;
+  position:absolute;
+  top:-55px;
+  background: darkblue;
+  box-sizing:initial;
+  margin-left: auto;
+  margin-right: auto;
+  left: -1px;
+  right: -1px;
+}
+.leftArrow{
+  position:absolute;
+  right:-24px;
+  width:20px;
+  height:100px;
+}
+.rightArrow{
+  position:absolute;
+  left:-24px;
+  width:20px;
+  height:100px;
+}
+.downArrow{
+  position:absolute;
+  top:-24px;
+  width:100px;
+  height:20px;
+  margin-left: auto;
+  margin-right: auto;
+  left: -1px;
+  right: -1px;
+}
