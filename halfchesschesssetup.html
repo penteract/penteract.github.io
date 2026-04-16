@@ -1,0 +1,46 @@
+<html>
+<head>
+<title> Half Chess Chess (awaiting a better name) </title>
+<script>
+function go(){
+
+}
+</script>
+</head>
+<body>
+<form action="halfchesschess.html" method="GET">
+<fieldset>
+  <legend>Choose a variant</legend>
+  <!-- must be kept in sync with halfchesschess.html (variants=[[chess,[chess]], [minichess,[minichess]], [chess,[minichess]],[minichess,[chess]]]) -->
+  <div>
+    <input type="radio" id="mm" name="v" value="1" checked />
+    <label for="mm">minichess in minichess</label>
+  </div>
+  <div>
+    <input type="radio" id="cm" name="v" value="2" />
+    <label for="cm">minichess in standard</label>
+  </div>
+  <div>
+    <input type="radio" id="mc" name="v" value="3" />
+    <label for="mc">standard in minichess</label>
+  </div>
+  <div>
+    <input type="radio" id="cc" name="v" value="0" />
+    <label for="cc">standard in standard</label>
+  </div>
+</fieldset>
+
+  <div>
+    <label for="mp">Online multiplayer?</label>
+    <input type="checkbox" name="mp" id="mp" onclick="tag.disabled=!mp.checked"/>
+  </div>
+  <div>
+    <label for="tag">multiplayer game tag (share with opponent)</label><input name="tag" id="tag" value="tag" maxlength="4" disabled />
+  </div>
+  <div>
+    <button>Start Game</button>
+  </div>
+</form>
+
+</body>
+</html>
