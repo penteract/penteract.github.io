@@ -145,13 +145,14 @@ window.addEventListener("load",(e=>{
       }
       else indicator.style.display="none"
     })
-    document.addEventListener("keypress", e=>{
+    document.addEventListener("keydown", e=>{
       //console.log(e)
       if(e.key==" "){
         //console.log(e);
         togglepause()
         //paused=!paused
         e.preventDefault()
+        e.stopPropagation()
       }
       if(e.key=="m"){
         togglemusic()
