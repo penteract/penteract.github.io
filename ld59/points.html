@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Points</title>
+<script src="points.js" charset="UTF-8"></script>
+<style>
+html,
+body,
+canvas {
+    margin: 0px;
+    padding: 0px;
+}
+body{
+/*background:green;*/
+}
+#indicator{
+position:absolute;
+}
+#game{
+position:absolute;
+}
+#container{
+position:absolute;
+width:100%;
+height:100%;
+/*text-align:center;*/
+pointer-events:none;
+}
+#container div{
+display:inline-block;
+padding:10px;
+pointer-events:all;
+}
+#hintdiv{
+background:lightblue;
+position:absolute;
+left:40px;
+top:50px;
+}
+#gameover,#continuediv{
+background:lightblue;
+position:absolute;
+min-height:50px;
+left:400px;
+/*max-width:100px;*/
+text-align:center;
+top:20px;
+}
+#buttons button{
+width:30px;
+height:30px;
+}
+img{
+display:none;
+}
+</style>
+</head>
+<body>
+<svg fill="#FFF" id="indicator" width="50" height="50" style="left:0px;top:0px;display:none">
+<!--<rect x="0" y="0" width="50" height="50" fill="green" />-->
+<circle r="25" cx="25" cy="25" fill="#FF0000CC" opacity="0.5"/>
+</svg>
+<canvas id="game" width="700" height="700">
+</canvas>
+
+<div id="container">
+  <div id="buttons">
+  <button id="pausebut" onclick="togglepause()">⏸</button>(space)
+  <button id="pausebut" onclick="togglemusic()">🔇</button>(m)
+  </div>
+  <div id="score">
+  Target:<span id="scorespan">0</span>
+  </div>
+  <div id="hintdiv" style="display:inline-block">
+  Click on a junction to change the points.
+  </div>
+  <div id="gameover" style="display:inline-block">
+  Game over<br>
+  <button onclick="restart()">Retry</button>
+  </div>
+  <div id="continuediv" style="display:none">
+  Level Complete<br>
+  <button onclick="nextLevel(gctx)">Next Level</button>
+  </div>
+</div>
+<img id="corner" src="corner1.png" />
+<img id="corner2" src="corner2.png" />
+<img id="horiz" src="straight1.png" />
+<img id="crash" src="crash3.png" />
+<!--<audio id="clacks" src="clacks4.wav"/>-->
+<script>
+
+let soundPaused=false //indicates whether the sound should be restarted upon resuming
+
+function togglepause(){
+  paused=!paused
+  pausebut.innerText = paused?"▶":"⏸"
+  if(paused && soundLoopID!==undefined){
+    stopMusic(true)
+  }
+  if(!paused && soundPaused){
+    startMusic()
+  }
+}
+const audio = new AudioContext()
+const quiet = new GainNode(audio,{gain:0.3})
+//quiet.gain=0.1
+quiet.connect(audio.destination)
+let clacksBuffer;
+//quiet.start()
+async function playClacks(){
+  //https://stackoverflow.com/questions/15125528/play-audio-through-js-with-overlapping#comment133185953_46038085
+  if(audio.state!="running") {await audio.resume()}
+  if(clacksBuffer){
+    let src = audio.createBufferSource()
+    src.buffer=clacksBuffer
+    src.connect(quiet)
+    src.start()
+  }
+}
+window.addEventListener("load",(e=>{
+  try{
+     window.fetch("clacks4.mp3")
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => audio.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => clacksBuffer=audioBuffer)
+    gctx = game.getContext('2d')
+    game.addEventListener("mousedown", function (e) {
+      if (e.button === 0) {
+        clk(e.offsetX/CELLSIZE,e.offsetY/CELLSIZE,state)
+        if(paused || continuediv.style.display!="none" || gameover.style.display!="none"){
+          drawState(state,gctx,(lastframe-lastTick)/tickrate)
+        }
+      }
+    })
+    game.addEventListener("mousemove", function (e) {
+      //console.log(e.layerX,e.offsetX,e.clientX,e.x)
+      let jndat
+      if(jndat = getjn(e.offsetX/CELLSIZE,e.offsetY/CELLSIZE,state)){
+        let [x,y,jn,points] = jndat
+        indicator.style.left=(x*CELLSIZE+(jn-(jn>2)*2)*25) +"px"
+        indicator.style.top=(y*CELLSIZE+(Math.abs(jn-1)*25))+"px"
+        indicator.style.display="initial"
+      }
+      else indicator.style.display="none"
+    })
+    document.addEventListener("keypress", e=>{
+      //console.log(e)
+      if(e.key==" "){
+        //console.log(e);
+        togglepause()
+        //paused=!paused
+        e.preventDefault()
+      }
+      if(e.key=="m"){
+        togglemusic()
+      }
+    })
+    nextLevel(gctx);
+    //startLevel(...tutorial,gctx)
+  }
+  catch(e){
+  document.body.append(e)
+  throw e
+  }
+}))
+</script>
+<script src="sounds.js" charset="UTF-8"></script>
+</body>
+</html>
