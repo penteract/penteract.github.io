@@ -421,7 +421,7 @@ function nextLevel(ctx){
 // mapstring, tickrate, newtrainrate, maxtrains, target,
 tutorial = [tutorial,1000,0.0,1,1,"Click on a junction to change the direction it will send trains"]
 lvl1 = [lvl1,1000,0.25,2,10,"Trains need to go to the matching color depot to count towards the target"]
-eternal = [lvl2,1000,0.15,3,Infinity,"How high a score can you reach?"]
+eternal = [lvl2,1000,0.15,3,Infinity,"What's the highest score you can reach?"]
 lvl2 = [lvl2,1000,0.1,3,20,""]
 lvls = [tutorial,lvl1,lvl2,eternal]
 function startLevel(str,tr,ntr,mxt,tgt,msg,ctx){
@@ -437,11 +437,11 @@ function startLevel(str,tr,ntr,mxt,tgt,msg,ctx){
   if(tgt===Infinity) score.childNodes[0].textContent="Score: "
   else score.childNodes[0].textContent="Target: "
   if(msg.length){
-    hintdiv.display="inline-block"
+    hintdiv.style.display="inline-block"
     hintdiv.innerText=msg
   }
   else{
-    hintdiv.display="none"
+    hintdiv.style.display="none"
   }
 
   startLoop(state,ctx)
