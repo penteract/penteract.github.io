@@ -1,0 +1,84 @@
+<!doctype html>
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+
+		<title>WaterBox</title>
+		<link rel="icon" type="image/x-icon" href="/assets/favicon-CF3JYrpe.png">
+		<meta
+			name="description"
+			content="JavaScript and HTML5 simulation of shallow water waves and rain drops. Users may modify the simulation parameters and generate waves with the mouse."
+		/>
+		<meta name="author" content="Some People" />
+
+		<!--[if lt IE 9]>
+			<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<script type="module" crossorigin src="/assets/about-ToS7UvVe.js"></script>
+		<link rel="stylesheet" crossorigin href="/assets/about-hEYdr2sY.css">
+	</head>
+
+	<body style="margin: 0; padding: 0">
+		<!-- ========================= menu ========================== -->
+		<form><button id="menubutton">Menu</button></form>
+
+		<form id="menu" class="modal" hidden>
+			<div>
+				<div class="header">
+					<button id="menuclose" type="button">Close</button>
+				</div>
+
+				<button type="button" id="mainmenu">Return to Main Menu</button>
+				<button id="reset" type="button">Restart</button>
+			</div>
+		</form>
+
+		<form id="msgbox" class="modal" hidden>
+			<div>
+				<h1 id="msgtitle"></h1>
+				<p id="msgbody"></p>
+
+				<button type="button" id="mainmenu1">Return to Main Menu</button>
+				<button id="reset1" type="button">Replay</button>
+			</div>
+		</form>
+
+		<div id="info">Space to begin simulation</div>
+		<!--
+		<form id="resolution" action="javascript:newRes()">
+			Resolution:<br />
+			<input
+				type="submit"
+				value="Update"
+				style="
+					position: relative;
+					left: -800px;
+					width: 0;
+					margin: 0;
+					padding: 0;
+				"
+			/>
+			n<sub>x</sub> <input id="nx" type="number" /> &nbsp; n<sub>y</sub>
+			<input id="ny" type="number" />
+		</form>-->
+
+		<!--<div id="copy">&copy; 2014 Doug Lipinski</div>-->
+
+		<form id="drops">
+			Left click:<br />
+			add dirt<br />
+			<br />
+			<!--Right click and drag: <br />build pump-->
+			<!--<input id="drop_range" type="range" min="0" max="100" value="20" onchange="javascript:sim.drop.freq=this.value;">-->
+		</form>
+		<div id="Target" class="hidden" style="bottom: 90%; left: 10%">
+			<img src="smile_happy2.png" /><img src="smile_sad2.png" />
+		</div>
+		<canvas id="main_canvas"></canvas>
+		<div style="visibility: hidden">
+			<img id="heightmap" src="heightmap_Lon.png" />
+			<canvas id="spare_canvas" width="256" height="256" />
+		</div>
+	</body>
+</html>
